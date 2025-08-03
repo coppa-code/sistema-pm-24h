@@ -495,7 +495,7 @@ app.get('/ping', (req, res) => {
     });
 });
 
-// Página principal ATUALIZADA
+// Página principal MELHORADA VISUALMENTE
 app.get('/', async (req, res) => {
     const uptime = Math.floor(process.uptime());
     const hours = Math.floor(uptime / 3600);
@@ -509,135 +509,720 @@ app.get('/', async (req, res) => {
         
         if (tomorrowBirthdays.length > 0) {
             birthdayInfo = `
-                <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                    <h3>🎂 ANIVERSÁRIOS AMANHÃ (${tomorrowBirthdays.length})</h3>
-                    ${tomorrowBirthdays.map(b => `
-                        <p>🎖️ <strong>${b.graduation || 'Sem graduação'} ${b.name || 'Sem nome'}</strong> - ${calculateAge(b.date) + 1} anos</p>
-                        <p style="margin-left: 20px; color: #666;">📞 ${b.phone || 'Tel não informado'} | 🏢 ${b.unit || 'Unidade não informada'}</p>
-                        <p style="margin-left: 20px; color: #888; font-size: 12px;">📅 Data: ${b.date} (${b.date.includes('/') ? 'Formato BR' : 'Formato US'})</p>
-                    `).join('')}
+                <div class="birthday-alert">
+                    <div class="alert-header">
+                        <h3>🎂 ANIVERSÁRIOS AMANHÃ</h3>
+                        <span class="badge">${tomorrowBirthdays.length}</span>
+                    </div>
+                    <div class="birthday-list">
+                        ${tomorrowBirthdays.map(b => `
+                            <div class="birthday-card">
+                                <div class="birthday-main">
+                                    <h4>🎖️ ${b.graduation || 'Sem graduação'} ${b.name || 'Sem nome'}</h4>
+                                    <p class="age">🎈 Fará ${calculateAge(b.date) + 1} anos</p>
+                                </div>
+                                <div class="birthday-details">
+                                    <span class="detail">📞 ${b.phone || 'Tel não informado'}</span>
+                                    <span class="detail">🏢 ${b.unit || 'Unidade não informada'}</span>
+                                    <span class="detail format-badge">${b.date.includes('/') ? 'BR' : 'US'}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `;
         } else {
             birthdayInfo = `
-                <div style="background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                    <p>📅 <strong>Nenhum aniversário amanhã</strong> - Sistema funcionando normalmente</p>
-                    <p>📋 Total no banco: ${birthdays.length} aniversários</p>
-                    <p>📊 Formatos detectados: ${birthdays.filter(b => b.date && b.date.includes('/')).length} BR (DD/MM/YYYY) | ${birthdays.filter(b => b.date && b.date.includes('-')).length} US (YYYY-MM-DD)</p>
+                <div class="no-birthday">
+                    <div class="no-birthday-icon">📅</div>
+                    <h3>Nenhum aniversário amanhã</h3>
+                    <p>Sistema funcionando normalmente</p>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span class="stat-number">${birthdays.length}</span>
+                            <span class="stat-label">Total no banco</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${birthdays.filter(b => b.date && b.date.includes('/')).length}</span>
+                            <span class="stat-label">Formato BR</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${birthdays.filter(b => b.date && b.date.includes('-')).length}</span>
+                            <span class="stat-label">Formato US</span>
+                        </div>
+                    </div>
                 </div>
             `;
         }
     } catch (error) {
         birthdayInfo = `
-            <div style="background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                <p>❌ <strong>Erro ao conectar Firebase:</strong> ${error.message}</p>
+            <div class="error-alert">
+                <div class="error-icon">❌</div>
+                <h3>Erro ao conectar Firebase</h3>
+                <p>${error.message}</p>
             </div>
         `;
     }
     
     res.send(`
         <!DOCTYPE html>
-        <html>
+        <html lang="pt-BR">
         <head>
-            <title>Sistema PM 24/7 v2.4.0 - DUAL FORMAT + TWILIO CONTROL</title>
             <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Sistema PM 24/7 v2.4.0 - Dashboard</title>
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
             <style>
-                body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
-                .header { text-align: center; background: #007bff; color: white; padding: 20px; border-radius: 10px; }
-                .status { background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 5px; }
-                .endpoint { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }
-                a { color: #007bff; text-decoration: none; }
-                a:hover { text-decoration: underline; }
-                .executions { background: #e7f3ff; padding: 15px; margin: 15px 0; border-radius: 5px; }
-                .timezone { background: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px; }
-                .optimization { background: #d1ecf1; padding: 15px; margin: 15px 0; border-radius: 5px; border: 2px solid #bee5eb; }
-                .twilio-alert { background: ${twilioLimitReached ? '#f8d7da' : '#d4edda'}; padding: 15px; margin: 15px 0; border-radius: 5px; border: 2px solid ${twilioLimitReached ? '#dc3545' : '#28a745'}; }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    color: #333;
+                    line-height: 1.6;
+                }
+                
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                
+                .header {
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px;
+                    padding: 30px;
+                    text-align: center;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                    margin-bottom: 30px;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                }
+                
+                .header h1 {
+                    font-size: 2.5rem;
+                    background: linear-gradient(45deg, #667eea, #764ba2);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin-bottom: 10px;
+                }
+                
+                .header .subtitle {
+                    font-size: 1.2rem;
+                    color: #666;
+                    margin-bottom: 15px;
+                }
+                
+                .header .version {
+                    display: inline-block;
+                    background: linear-gradient(45deg, #28a745, #20c997);
+                    color: white;
+                    padding: 8px 20px;
+                    border-radius: 25px;
+                    font-weight: bold;
+                    font-size: 0.9rem;
+                }
+                
+                .dashboard-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 25px;
+                    margin-bottom: 30px;
+                }
+                
+                                .card {
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 15px;
+                    padding: 25px;
+                    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+                
+                .card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+                }
+                
+                .card-header {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 2px solid #f0f0f0;
+                }
+                
+                .card-icon {
+                    font-size: 2rem;
+                    margin-right: 15px;
+                    width: 50px;
+                    height: 50px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 12px;
+                    background: linear-gradient(45deg, #667eea, #764ba2);
+                    color: white;
+                }
+                
+                .card-title {
+                    font-size: 1.3rem;
+                    font-weight: 600;
+                    color: #333;
+                }
+                
+                .status-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 0;
+                    border-bottom: 1px solid #f5f5f5;
+                }
+                
+                .status-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .status-label {
+                    font-weight: 500;
+                    color: #666;
+                }
+                
+                .status-value {
+                    font-weight: 600;
+                    color: #333;
+                }
+                
+                .status-value.success {
+                    color: #28a745;
+                }
+                
+                .status-value.danger {
+                    color: #dc3545;
+                }
+                
+                .status-value.warning {
+                    color: #ffc107;
+                }
+                
+                .twilio-status {
+                    background: ${twilioLimitReached ? 'linear-gradient(45deg, #dc3545, #c82333)' : 'linear-gradient(45deg, #28a745, #20c997)'};
+                    color: white;
+                    border-radius: 15px;
+                    padding: 25px;
+                }
+                
+                .twilio-status h3 {
+                    margin-bottom: 20px;
+                    font-size: 1.4rem;
+                }
+                
+                .twilio-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                }
+                
+                .twilio-item {
+                    background: rgba(255, 255, 255, 0.2);
+                    padding: 15px;
+                    border-radius: 10px;
+                    backdrop-filter: blur(5px);
+                }
+                
+                .twilio-item strong {
+                    display: block;
+                    margin-bottom: 5px;
+                    font-size: 0.9rem;
+                }
+                
+                .birthday-alert {
+                    background: linear-gradient(45deg, #ffc107, #ff8c00);
+                    color: white;
+                    border-radius: 15px;
+                    padding: 25px;
+                    margin-bottom: 25px;
+                }
+                
+                .alert-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                }
+                
+                .alert-header h3 {
+                    font-size: 1.5rem;
+                    margin: 0;
+                }
+                
+                .badge {
+                    background: rgba(255, 255, 255, 0.3);
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                }
+                
+                .birthday-list {
+                    display: grid;
+                    gap: 15px;
+                }
+                
+                .birthday-card {
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 12px;
+                    padding: 20px;
+                    backdrop-filter: blur(5px);
+                }
+                
+                .birthday-main h4 {
+                    font-size: 1.2rem;
+                    margin-bottom: 8px;
+                }
+                
+                .birthday-main .age {
+                    font-size: 1.1rem;
+                    margin-bottom: 15px;
+                    opacity: 0.9;
+                }
+                
+                .birthday-details {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                
+                .detail {
+                    background: rgba(255, 255, 255, 0.3);
+                    padding: 6px 12px;
+                    border-radius: 15px;
+                    font-size: 0.9rem;
+                }
+                
+                .format-badge {
+                    background: rgba(0, 0, 0, 0.2) !important;
+                    font-weight: bold;
+                }
+                
+                .no-birthday {
+                    background: linear-gradient(45deg, #28a745, #20c997);
+                    color: white;
+                    text-align: center;
+                    padding: 40px;
+                    border-radius: 15px;
+                    margin-bottom: 25px;
+                }
+                
+                .no-birthday-icon {
+                    font-size: 4rem;
+                    margin-bottom: 20px;
+                }
+                
+                .no-birthday h3 {
+                    font-size: 1.8rem;
+                    margin-bottom: 10px;
+                }
+                
+                .no-birthday p {
+                    font-size: 1.1rem;
+                    margin-bottom: 25px;
+                    opacity: 0.9;
+                }
+                
+                .stats {
+                    display: flex;
+                    justify-content: center;
+                    gap: 30px;
+                    flex-wrap: wrap;
+                }
+                
+                .stat-item {
+                    text-align: center;
+                }
+                
+                .stat-number {
+                    display: block;
+                    font-size: 2rem;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                
+                .stat-label {
+                    font-size: 0.9rem;
+                    opacity: 0.8;
+                }
+                
+                .error-alert {
+                    background: linear-gradient(45deg, #dc3545, #c82333);
+                    color: white;
+                    text-align: center;
+                    padding: 30px;
+                    border-radius: 15px;
+                    margin-bottom: 25px;
+                }
+                
+                .error-icon {
+                    font-size: 3rem;
+                    margin-bottom: 15px;
+                }
+                
+                .optimization-card {
+                    background: linear-gradient(45deg, #17a2b8, #138496);
+                    color: white;
+                    border-radius: 15px;
+                    padding: 25px;
+                }
+                
+                .optimization-card h3 {
+                    margin-bottom: 20px;
+                    font-size: 1.4rem;
+                }
+                
+                .optimization-list {
+                    list-style: none;
+                    padding: 0;
+                }
+                
+                .optimization-list li {
+                    padding: 8px 0;
+                    padding-left: 25px;
+                    position: relative;
+                }
+                
+                .optimization-list li:before {
+                    content: "✅";
+                    position: absolute;
+                    left: 0;
+                    top: 8px;
+                }
+                
+                .endpoints-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 15px;
+                    margin-top: 25px;
+                }
+                
+                .endpoint-card {
+                    background: rgba(255, 255, 255, 0.95);
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-decoration: none;
+                    color: #333;
+                    transition: all 0.3s ease;
+                    border: 2px solid transparent;
+                }
+                
+                .endpoint-card:hover {
+                    transform: translateY(-3px);
+                    border-color: #667eea;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                    text-decoration: none;
+                    color: #333;
+                }
+                
+                .endpoint-icon {
+                    font-size: 1.5rem;
+                    margin-bottom: 10px;
+                    display: block;
+                }
+                
+                .endpoint-title {
+                    font-weight: 600;
+                    font-size: 1.1rem;
+                    margin-bottom: 8px;
+                }
+                
+                .endpoint-desc {
+                    font-size: 0.9rem;
+                    color: #666;
+                    line-height: 1.4;
+                }
+                
+                .footer {
+                    background: rgba(255, 255, 255, 0.95);
+                    border-radius: 15px;
+                    padding: 25px;
+                    text-align: center;
+                    margin-top: 30px;
+                    backdrop-filter: blur(10px);
+                }
+                
+                .footer-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 20px;
+                }
+                
+                .footer-item {
+                    padding: 15px;
+                    background: #f8f9fa;
+                    border-radius: 10px;
+                }
+                
+                .footer-item strong {
+                    display: block;
+                    margin-bottom: 5px;
+                    color: #667eea;
+                }
+                
+                @media (max-width: 768px) {
+                    .container {
+                        padding: 15px;
+                    }
+                    
+                    .header h1 {
+                        font-size: 2rem;
+                    }
+                    
+                    .dashboard-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .stats {
+                        gap: 20px;
+                    }
+                    
+                    .twilio-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+                
+                .pulse {
+                    animation: pulse 2s infinite;
+                }
+                
+                @keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.7; }
+                    100% { opacity: 1; }
+                }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>🎖️ Sistema PM 24/7 v2.4.0 - DUAL FORMAT!</h1>
-                <p>Sistema de Aniversários da Polícia Militar</p>
-                <p><strong>💰 UMA MENSAGEM POR HORÁRIO + CONTROLE TWILIO</strong></p>
+            <div class="container">
+                <div class="header">
+                    <h1><i class="fas fa-shield-alt"></i> Sistema PM 24/7</h1>
+                    <div class="subtitle">Sistema de Aniversários da Polícia Militar</div>
+                    <div class="version">v2.4.0 - Dual Format + Twilio Control</div>
+                </div>
+                
+                <div class="card twilio-status">
+                    <h3>
+                        <i class="fas fa-${twilioLimitReached ? 'exclamation-triangle' : 'check-circle'}"></i>
+                        ${twilioLimitReached ? 'LIMITE TWILIO ATINGIDO' : 'TWILIO OPERACIONAL'}
+                    </h3>
+                    <div class="twilio-grid">
+                        <div class="twilio-item">
+                            <strong>Status:</strong>
+                            ${twilioLimitReached ? 'BLOQUEADO até 00:00 UTC' : 'Funcionando normalmente'}
+                        </div>
+                        <div class="twilio-item">
+                            <strong>Mensagens hoje:</strong>
+                            ${dailyMessageCount}/${MAX_DAILY_MESSAGES}
+                        </div>
+                        <div class="twilio-item">
+                            <strong>Limite interno:</strong>
+                            ${MAX_DAILY_MESSAGES} mensagens/dia
+                        </div>
+                        <div class="twilio-item">
+                            <strong>Reset automático:</strong>
+                            00:00 UTC (21:00 Brasil)
+                        </div>
+                    </div>
+                </div>
+                
+                ${birthdayInfo}
+                
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div class="card-title">Status do Sistema</div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-clock"></i> Horário Brasil:</span>
+                            <span class="status-value">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-globe"></i> Horário UTC:</span>
+                            <span class="status-value">${new Date().toISOString()}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-hourglass-half"></i> Uptime:</span>
+                            <span class="status-value">${hours}h ${minutes}m</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-database"></i> Firebase:</span>
+                            <span class="status-value ${db ? 'success' : 'danger'}">${db ? 'Conectado ✅' : 'Desconectado ❌'}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fab fa-whatsapp"></i> WhatsApp:</span>
+                            <span class="status-value success">${CONFIG.twilio.toNumber}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-sync-alt"></i> Keep-alive:</span>
+                            <span class="status-value ${CONFIG.keepAlive.enabled ? 'success' : 'danger'}">${CONFIG.keepAlive.enabled ? 'Ativo ✅' : 'Desativo ❌'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="card-title">Horários de Execução</div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-moon"></i> 10:50 Brasil:</span>
+                            <span class="status-value">12:20 UTC (Verificação 1)</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-sun"></i> 10:55 Brasil:</span>
+                            <span class="status-value">12:25 UTC (Verificação 2)</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label"><i class="fas fa-redo"></i> Reset diário:</span>
+                            <span class="status-value">00:00 UTC = 21:00 Brasil</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card optimization-card">
+                    <h3><i class="fas fa-rocket"></i> Melhorias v2.4.0</h3>
+                    <ul class="optimization-list">
+                        <li><strong>Suporte duplo formato:</strong> DD/MM/YYYY (BR) e YYYY-MM-DD (US)</li>
+                        <li><strong>Controle rigoroso Twilio:</strong> Flag de bloqueio quando limite atingido</li>
+                        <li><strong>Limite interno reduzido:</strong> 3 mensagens/dia (segurança extra)</li>
+                        <li><strong>Economia máxima:</strong> 1 mensagem por horário (independente da quantidade)</li>
+                        <li><strong>Reset automático:</strong> Contador e flags zerados às 00:00 UTC</li>
+                        <li><strong>Detecção inteligente:</strong> Reconhece automaticamente formato da data</li>
+                        <li><strong>Sem testes desnecessários:</strong> Só envia se houver aniversários</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="card-title">Como Funciona a Otimização</div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label"><i class="fas fa-users"></i> Múltiplos aniversários:</span>
+                        <span class="status-value">1 mensagem única com todos os nomes</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label"><i class="fas fa-piggy-bank"></i> Economia exemplo:</span>
+                        <span class="status-value">5 aniversários = 1 mensagem (4 poupadas)</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label"><i class="fas fa-birthday-cake"></i> Formato da mensagem:</span>
+                        <span class="status-value">Graduação + Nome + Idade + Telefone + Unidade</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label"><i class="fas fa-clock"></i> Dois horários:</span>
+                        <span class="status-value">10:50 e 10:55 (máximo 2 mensagens/dia)</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label"><i class="fas fa-ban"></i> Sem aniversários:</span>
+                        <span class="status-value">Nenhuma mensagem enviada (economia total)</span>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div class="card-title">Endpoints Disponíveis</div>
+                    </div>
+                    <div class="endpoints-grid">
+                        <a href="/test" class="endpoint-card">
+                            <div class="endpoint-icon">🧪</div>
+                            <div class="endpoint-title">/test</div>
+                            <div class="endpoint-desc">Teste geral com dados reais do Firebase</div>
+                        </a>
+                        <a href="/test-0920" class="endpoint-card">
+                            <div class="endpoint-icon">🌙</div>
+                            <div class="endpoint-title">/test-0920</div>
+                            <div class="endpoint-desc">Testar execução das 10:50</div>
+                        </a>
+                        <a href="/test-0925" class="endpoint-card">
+                            <div class="endpoint-icon">🌅</div>
+                            <div class="endpoint-title">/test-0925</div>
+                            <div class="endpoint-desc">Testar execução das 10:55</div>
+                        </a>
+                        <a href="/birthdays" class="endpoint-card">
+                            <div class="endpoint-icon">📋</div>
+                            <div class="endpoint-title">/birthdays</div>
+                            <div class="endpoint-desc">Ver todos os aniversários cadastrados</div>
+                        </a>
+                        <a href="/check" class="endpoint-card">
+                            <div class="endpoint-icon">🔍</div>
+                            <div class="endpoint-title">/check</div>
+                            <div class="endpoint-desc">Verificação manual do sistema</div>
+                        </a>
+                        <a href="/status" class="endpoint-card">
+                            <div class="endpoint-icon">📊</div>
+                            <div class="endpoint-title">/status</div>
+                            <div class="endpoint-desc">Status JSON completo do sistema</div>
+                        </a>
+                        <a href="/ping" class="endpoint-card">
+                            <div class="endpoint-icon">🔄</div>
+                            <div class="endpoint-title">/ping</div>
+                            <div class="endpoint-desc">Keep-alive + informações do sistema</div>
+                        </a>
+                        <a href="/debug" class="endpoint-card">
+                            <div class="endpoint-icon">🔍</div>
+                            <div class="endpoint-title">/debug</div>
+                            <div class="endpoint-desc">Debug completo Firebase + formatos</div>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <div class="footer-grid">
+                        <div class="footer-item">
+                            <strong>Sistema integrado:</strong>
+                            Firebase + Twilio + Render FREE funcionando 24/7
+                        </div>
+                        <div class="footer-item">
+                            <strong>Versão:</strong>
+                            2.4.0 - Dual Format + Twilio Control
+                        </div>
+                        <div class="footer-item">
+                            <strong>Economia:</strong>
+                            Máxima eficiência + Controle rigoroso de limite
+                        </div>
+                        <div class="footer-item">
+                            <strong>Formatos suportados:</strong>
+                            DD/MM/YYYY (Brasil) e YYYY-MM-DD (Americano)
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-shield-alt"></i> Sistema PM v2.4.0 - Dashboard Moderno
+                    </p>
+                </div>
             </div>
-            
-            <div class="twilio-alert">
-                <h3>${twilioLimitReached ? '🚫 LIMITE TWILIO ATINGIDO' : '✅ TWILIO FUNCIONANDO'}:</h3>
-                <ul>
-                    <li><strong>Status:</strong> ${twilioLimitReached ? 'BLOQUEADO até 00:00 UTC' : 'Operacional'}</li>
-                    <li><strong>Mensagens hoje:</strong> ${dailyMessageCount}/${MAX_DAILY_MESSAGES}</li>
-                    <li><strong>Limite interno:</strong> ${MAX_DAILY_MESSAGES} mensagens/dia</li>
-                    <li><strong>Reset automático:</strong> 00:00 UTC (21:00 Brasil)</li>
-                </ul>
-            </div>
-            
-            <div class="optimization">
-                <h3>🔄 MELHORIAS v2.4.0:</h3>
-                <ul>
-                    <li>✅ <strong>Suporte duplo formato:</strong> DD/MM/YYYY (BR) e YYYY-MM-DD (US)</li>
-                    <li>✅ <strong>Controle rigoroso Twilio:
-                                        <li>✅ <strong>Controle rigoroso Twilio:</strong> Flag de bloqueio quando limite atingido</li>
-                    <li>✅ <strong>Limite interno reduzido:</strong> 3 mensagens/dia (segurança extra)</li>
-                    <li>✅ <strong>Economia máxima:</strong> 1 mensagem por horário (independente da quantidade)</li>
-                    <li>✅ <strong>Reset automático:</strong> Contador e flags zerados às 00:00 UTC</li>
-                    <li>✅ <strong>Detecção inteligente:</strong> Reconhece automaticamente formato da data</li>
-                    <li>✅ <strong>Sem testes desnecessários:</strong> Só envia se houver aniversários</li>
-                </ul>
-            </div>
-            
-            <div class="status">
-                <h3>📊 STATUS ATUAL:</h3>
-                <ul>
-                    <li><strong>🕐 Horário Brasil:</strong> ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</li>
-                    <li><strong>🌍 Horário UTC:</strong> ${new Date().toISOString()}</li>
-                    <li><strong>⏱️ Uptime:</strong> ${hours}h ${minutes}m</li>
-                    <li><strong>🔥 Firebase:</strong> ${db ? 'Conectado ✅' : 'Desconectado ❌'}</li>
-                    <li><strong>📱 WhatsApp:</strong> ${CONFIG.twilio.toNumber}</li>
-                    <li><strong>🔄 Keep-alive:</strong> ${CONFIG.keepAlive.enabled ? 'Ativo ✅' : 'Desativo ❌'}</li>
-                </ul>
-            </div>
-            
-            ${birthdayInfo}
-            
-            <div class="timezone">
-                <h3>⏰ HORÁRIOS DE EXECUÇÃO:</h3>
-                <ul>
-                    <li><strong>🌙 10:50 Brasil</strong> = 12:20 UTC (Verificação 1)</li>
-                    <li><strong>🌅 10:55 Brasil</strong> = 12:25 UTC (Verificação 2)</li>
-                    <li><strong>🔄 Reset diário</strong> = 00:00 UTC = 21:00 Brasil</li>
-                </ul>
-            </div>
-            
-            <div class="executions">
-                <h3>🎯 COMO FUNCIONA A OTIMIZAÇÃO:</h3>
-                <ul>
-                    <li><strong>📊 Múltiplos aniversários:</strong> 1 mensagem única com todos os nomes</li>
-                    <li><strong>💰 Economia exemplo:</strong> 5 aniversários = 1 mensagem (4 poupadas)</li>
-                    <li><strong>🎂 Formato da mensagem:</strong> Graduação + Nome + Idade + Telefone + Unidade</li>
-                    <li><strong>⏰ Dois horários:</strong> 10:50 e 10:55 (máximo 2 mensagens/dia)</li>
-                    <li><strong>🚫 Sem aniversários:</strong> Nenhuma mensagem enviada (economia total)</li>
-                </ul>
-            </div>
-            
-            <h3>🔗 ENDPOINTS DISPONÍVEIS:</h3>
-            <div class="endpoint"><a href="/test">🧪 /test</a> - Teste geral com dados reais</div>
-            <div class="endpoint"><a href="/test-0920">🌙 /test-0920</a> - Testar execução 10:50</div>
-            <div class="endpoint"><a href="/test-0925">🌅 /test-0925</a> - Testar execução 10:55</div>
-            <div class="endpoint"><a href="/birthdays">📋 /birthdays</a> - Ver todos os aniversários</div>
-            <div class="endpoint"><a href="/check">🔍 /check</a> - Verificação manual</div>
-            <div class="endpoint"><a href="/status">📊 /status</a> - Status JSON completo</div>
-            <div class="endpoint"><a href="/ping">🔄 /ping</a> - Keep-alive + info sistema</div>
-            <div class="endpoint"><a href="/debug">🔍 /debug</a> - Debug completo Firebase + formatos</div>
-            
-            <hr>
-            <p><small>💡 <strong>Sistema integrado:</strong> Firebase + Twilio + Render FREE funcionando 24/7</small></p>
-            <p><small>🔧 <strong>Versão:</strong> 2.4.0 - Dual Format + Twilio Control</small></p>
-            <p><small>💰 <strong>Economia:</strong> Máxima eficiência + Controle rigoroso de limite</small></p>
-            <p><small>📅 <strong>Formatos suportados:</strong> DD/MM/YYYY (Brasil) e YYYY-MM-DD (Americano)</small></p>
         </body>
         </html>
     `);
 });
+
+// Resto do código permanece exatamente igual...
+// [Continua com todas as outras rotas e funções sem alteração]
 
 // Endpoint para teste geral OTIMIZADO
 app.get('/test', async (req, res) => {
@@ -770,7 +1355,7 @@ app.get('/test-0920', async (req, res) => {
             version: '2.4.0'
         });
     } catch (error) {
-        res.status(500).json({ 
+                res.status(500).json({ 
             success: false, 
             error: error.message,
             twilioLimitReached: twilioLimitReached,
@@ -1140,7 +1725,7 @@ async function startServer() {
         // Teste inicial (opcional)
         setTimeout(async () => {
             try {
-                                console.log('🧪 Executando teste inicial...');
+                console.log('🧪 Executando teste inicial...');
                 const birthdays = await getBirthdaysFromFirebase();
                 const tomorrowBirthdays = checkTomorrowBirthdays(birthdays);
                 
@@ -1198,3 +1783,4 @@ startServer();
 module.exports = app;
 
 
+                    
