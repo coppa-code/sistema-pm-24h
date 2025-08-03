@@ -40,7 +40,7 @@ const CONFIG = {
 
 // 🛡️ CONTROLE DE LIMITE DIÁRIO E TWILIO
 let dailyMessageCount = 0;
-const MAX_DAILY_MESSAGES = 3; // ⚠️ REDUZIDO PARA EVITAR LIMITE TWILIO
+const MAX_DAILY_MESSAGES = 10; // ⚠️ REDUZIDO PARA EVITAR LIMITE TWILIO
 let twilioLimitReached = false;
 
 // 🕘 NOVO: CONTROLE DE CRON JOBS DINÂMICOS
