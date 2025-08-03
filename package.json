@@ -1,33 +1,19 @@
 {
-  "name": "sistema-pm-aniversarios",
-  "version": "2.2.0",
-  "description": "Sistema PM 24/7 - Aniversários 23:58/23:59 Brasil",
+  "name": "sistema-pm-24h",
+  "version": "2.0.0",
+  "description": "Sistema PM 24/7 - Lembretes de Aniversário Otimizado",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "test": "node -e \"console.log('Sistema PM funcionando!')\""
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "node-cron": "^3.0.3",
+    "node-cron": "^3.0.2",
     "firebase": "^10.7.1",
-    "node-fetch": "^2.7.0"
+    "twilio": "^4.19.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "keywords": [
-    "nodejs",
-    "express",
-    "firebase",
-    "twilio",
-    "whatsapp",
-    "cron",
-    "render",
-    "aniversarios",
-    "policia-militar"
-  ],
-  "author": "Sistema PM",
-  "license": "MIT"
+  }
 }
