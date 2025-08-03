@@ -23,7 +23,7 @@ const CONFIG = {
     },
     notification: {
         timing: process.env.NOTIFICATION_TIMING || '1-day',
-        sendTime: process.env.NOTIFICATION_TIME || '10:50-10:55'
+        sendTime: process.env.NOTIFICATION_TIME || '18:40-18:45'
     },
     keepAlive: {
         enabled: process.env.KEEP_ALIVE_ENABLED !== 'false',
@@ -330,11 +330,11 @@ function createCombinedBirthdayMessage(birthdays, periodo = 'padrão') {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const periodoEmoji = periodo === '10:50' ? '🌙' : 
-                        periodo === '10:55' ? '🌅' : '🎂';
+    const periodoEmoji = periodo === '18:40' ? '🌙' : 
+                        periodo === '18:45' ? '🌅' : '🎂';
     
-    const periodoTexto = periodo === '10:50' ? '(Lembrete 10:50h)' : 
-                        periodo === '10:55' ? '(Lembrete 10:55h)' : 
+    const periodoTexto = periodo === '18:40' ? '(Lembrete 18:40h)' : 
+                        periodo === '18:45' ? '(Lembrete 18:45h)' : 
                         '(Lembrete Automático)';
     
     const birthdayList = birthdays.map((birthday, index) => {
@@ -439,23 +439,23 @@ _Sistema PM - Alerta de Erro v2.4.0_ ⚠️`;
     }
 }
 
-// 🕘 CONFIGURAR CRON JOBS (10:50 e 10:55 Brasil no Render UTC)
-console.log('⏰ Configurando cron jobs para 10:50 e 10:55 Brasil...');
+// 🕘 CONFIGURAR CRON JOBS (18:40 e 18:45 Brasil no Render UTC)
+console.log('⏰ Configurando cron jobs para 18:40 e 18:45 Brasil...');
 
-// 10:50 Brasil = 12:20 UTC - Verificação 1
-cron.schedule('50 13 * * *', () => {
+// 18:40 Brasil = 12:20 UTC - Verificação 1
+cron.schedule('40 19 * * *', () => {
     const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    console.log(`🌙 EXECUÇÃO 10:50 BRASIL (12:20 UTC) - ${brasilTime}`);
-    executeAutomaticCheck('10:50');
+    console.log(`🌙 EXECUÇÃO 18:40 BRASIL (12:20 UTC) - ${brasilTime}`);
+    executeAutomaticCheck('18:40');
 }, {
     timezone: "UTC"
 });
 
-// 10:55 Brasil = 12:25 UTC - Verificação 2
-cron.schedule('55 13 * * *', () => {
+// 18:45 Brasil = 12:25 UTC - Verificação 2
+cron.schedule('45 19 * * *', () => {
     const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    console.log(`🌅 EXECUÇÃO 10:55 BRASIL (12:25 UTC) - ${brasilTime}`);
-    executeAutomaticCheck('10:55');
+    console.log(`🌅 EXECUÇÃO 18:45 BRASIL (12:25 UTC) - ${brasilTime}`);
+    executeAutomaticCheck('18:45');
 }, {
     timezone: "UTC"
 });
@@ -470,8 +470,8 @@ cron.schedule('0 0 * * *', () => {
 });
 
 console.log(`⏰ Cron jobs configurados para Render (UTC):`);
-console.log(`   🌙 12:20 UTC = 10:50 Brasil (Verificação 1)`);
-console.log(`   🌅 12:25 UTC = 10:55 Brasil (Verificação 2)`);
+console.log(`   🌙 12:20 UTC = 18:40 Brasil (Verificação 1)`);
+console.log(`   🌅 12:25 UTC = 18:45 Brasil (Verificação 2)`);
 console.log(`   🔄 00:00 UTC = Reset contador diário + flag Twilio`);
 
 // 🌐 ROTAS WEB
@@ -1085,11 +1085,11 @@ app.get('/', async (req, res) => {
                             <div class="card-title">Horários de Execução</div>
                         </div>
                         <div class="status-item">
-                            <span class="status-label"><i class="fas fa-moon"></i> 10:50 Brasil:</span>
+                            <span class="status-label"><i class="fas fa-moon"></i> 18:40 Brasil:</span>
                             <span class="status-value">12:20 UTC (Verificação 1)</span>
                         </div>
                         <div class="status-item">
-                            <span class="status-label"><i class="fas fa-sun"></i> 10:55 Brasil:</span>
+                            <span class="status-label"><i class="fas fa-sun"></i> 18:45 Brasil:</span>
                             <span class="status-value">12:25 UTC (Verificação 2)</span>
                         </div>
                         <div class="status-item">
@@ -1133,7 +1133,7 @@ app.get('/', async (req, res) => {
                     </div>
                     <div class="status-item">
                         <span class="status-label"><i class="fas fa-clock"></i> Dois horários:</span>
-                        <span class="status-value">10:50 e 10:55 (máximo 2 mensagens/dia)</span>
+                        <span class="status-value">18:40 e 18:45 (máximo 2 mensagens/dia)</span>
                     </div>
                     <div class="status-item">
                         <span class="status-label"><i class="fas fa-ban"></i> Sem aniversários:</span>
@@ -1157,12 +1157,12 @@ app.get('/', async (req, res) => {
                         <a href="/test-0920" class="endpoint-card">
                             <div class="endpoint-icon">🌙</div>
                             <div class="endpoint-title">/test-0920</div>
-                            <div class="endpoint-desc">Testar execução das 10:50</div>
+                            <div class="endpoint-desc">Testar execução das 18:40</div>
                         </a>
                         <a href="/test-0925" class="endpoint-card">
                             <div class="endpoint-icon">🌅</div>
                             <div class="endpoint-title">/test-0925</div>
-                            <div class="endpoint-desc">Testar execução das 10:55</div>
+                            <div class="endpoint-desc">Testar execução das 18:45</div>
                         </a>
                         <a href="/birthdays" class="endpoint-card">
                             <div class="endpoint-icon">📋</div>
@@ -1269,8 +1269,8 @@ app.get('/test', async (req, res) => {
 • 📅 Formato US (YYYY-MM-DD): ${usFormats}
 
 ⏰ *Execuções Automáticas:*
-• 🌙 10:50 Brasil (12:20 UTC) - Verificação 1
-• 🌅 10:55 Brasil (12:25 UTC) - Verificação 2
+• 🌙 18:40 Brasil (12:20 UTC) - Verificação 1
+• 🌅 18:45 Brasil (12:25 UTC) - Verificação 2
 
 💰 *OTIMIZAÇÃO v2.4.0:*
 • ✅ Suporte duplo formato de data
@@ -1325,24 +1325,24 @@ _Teste manual com dados reais e controle Twilio_ 🚀`;
     }
 });
 
-// Teste específico para 10:50
+// Teste específico para 18:40
 app.get('/test-0920', async (req, res) => {
     try {
         if (twilioLimitReached) {
             return res.status(429).json({
                 success: false,
-                error: 'Limite Twilio atingido - Teste 10:50 bloqueado',
+                error: 'Limite Twilio atingido - Teste 18:40 bloqueado',
                 twilioStatus: 'BLOCKED',
                 resetTime: '00:00 UTC (21:00 Brasil)',
                 version: '2.4.0'
             });
         }
 
-        console.log('🧪 TESTE MANUAL 10:50 INICIADO...');
-        await executeAutomaticCheck('10:50');
+        console.log('🧪 TESTE MANUAL 18:40 INICIADO...');
+        await executeAutomaticCheck('18:40');
         res.json({ 
             success: true, 
-            message: 'Teste 10:50 Brasil (12:20 UTC) executado com controle Twilio!',
+            message: 'Teste 18:40 Brasil (12:20 UTC) executado com controle Twilio!',
             timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             utc: new Date().toISOString(),
             timezone: 'America/Sao_Paulo → UTC',
@@ -1365,24 +1365,24 @@ app.get('/test-0920', async (req, res) => {
     }
 });
 
-// Teste específico para 10:55
+// Teste específico para 18:45
 app.get('/test-0925', async (req, res) => {
     try {
         if (twilioLimitReached) {
             return res.status(429).json({
                 success: false,
-                error: 'Limite Twilio atingido - Teste 10:55 bloqueado',
+                error: 'Limite Twilio atingido - Teste 18:45 bloqueado',
                 twilioStatus: 'BLOCKED',
                 resetTime: '00:00 UTC (21:00 Brasil)',
                 version: '2.4.0'
             });
         }
 
-        console.log('🧪 TESTE MANUAL 10:55 INICIADO...');
-        await executeAutomaticCheck('10:55');
+        console.log('🧪 TESTE MANUAL 18:45 INICIADO...');
+        await executeAutomaticCheck('18:45');
         res.json({ 
             success: true, 
-            message: 'Teste 10:55 Brasil (12:25 UTC) executado com controle Twilio!',
+            message: 'Teste 18:45 Brasil (12:25 UTC) executado com controle Twilio!',
             timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             utc: new Date().toISOString(),
             timezone: 'America/Sao_Paulo → UTC',
@@ -1592,8 +1592,8 @@ app.get('/status', async (req, res) => {
                 utc: new Date().toISOString(),
                 renderTimezone: 'UTC',
                 conversion: {
-                    '10:50_Brasil': '12:20_UTC',
-                    '10:55_Brasil': '12:25_UTC'
+                    '18:40_Brasil': '12:20_UTC',
+                    '18:45_Brasil': '12:25_UTC'
                 }
             },
             firebase: {
@@ -1618,8 +1618,8 @@ app.get('/status', async (req, res) => {
                 optimization: 'Controle rigoroso ativo'
             },
             cronJobs: {
-                '12:20_UTC': '10:50 Brasil - Verificação 1',
-                '12:25_UTC': '10:55 Brasil - Verificação 2',
+                '12:20_UTC': '18:40 Brasil - Verificação 1',
+                '12:25_UTC': '18:45 Brasil - Verificação 2',
                 '00:00_UTC': 'Reset contador diário + flag Twilio'
             },
             keepAlive: {
@@ -1712,8 +1712,8 @@ async function startServer() {
             console.log(`🚫 Controle Twilio: ${twilioLimitReached ? 'BLOQUEADO' : 'ATIVO'} ✅`);
             console.log(`📅 Formatos suportados: DD/MM/YYYY + YYYY-MM-DD ✅`);
             console.log(`\n⏰ CRON JOBS ATIVOS:`);
-            console.log(`   🌙 12:20 UTC = 10:50 Brasil (Verificação 1)`);
-            console.log(`   🌅 12:25 UTC = 10:55 Brasil (Verificação 2)`);
+            console.log(`   🌙 12:20 UTC = 18:40 Brasil (Verificação 1)`);
+            console.log(`   🌅 12:25 UTC = 18:45 Brasil (Verificação 2)`);
             console.log(`   🔄 00:00 UTC = Reset contador + flag Twilio`);
             console.log(`\n🎖️ Sistema PM v2.4.0 pronto para funcionar 24/7!`);
             console.log(`📋 Próxima verificação: ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}`);
