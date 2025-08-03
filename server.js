@@ -23,7 +23,7 @@ const CONFIG = {
     },
     notification: {
         timing: process.env.NOTIFICATION_TIMING || '1-day',
-        sendTime: process.env.NOTIFICATION_TIME || '09:00'
+        sendTime: process.env.NOTIFICATION_TIME || '22:52'
     },
     keepAlive: {
         enabled: process.env.KEEP_ALIVE_ENABLED !== 'false',
@@ -337,7 +337,7 @@ cron.schedule(cronTimeMorning, () => {
 
 // Executa todos os dias às 22:40 (noite)
 cron.schedule('40 22 * * *', () => {
-    console.log(`🌙 EXECUÇÃO NOITE (22:40) - ${new Date().toLocaleString('pt-BR')}`);
+    console.log(`🌙 EXECUÇÃO NOITE (22:52) - ${new Date().toLocaleString('pt-BR')}`);
     executeAutomaticCheck('noite');
 }, {
     timezone: "America/Sao_Paulo"
