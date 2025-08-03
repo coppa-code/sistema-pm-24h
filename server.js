@@ -40,7 +40,7 @@ const CONFIG = {
 
 // 🛡️ CONTROLE DE LIMITE DIÁRIO E TWILIO
 let dailyMessageCount = 0;
-const MAX_DAILY_MESSAGES = 10; // ⚠️ REDUZIDO PARA EVITAR LIMITE TWILIO
+const MAX_DAILY_MESSAGES = 3; // ⚠️ REDUZIDO PARA EVITAR LIMITE TWILIO
 let twilioLimitReached = false;
 
 // 🕘 NOVO: CONTROLE DE CRON JOBS DINÂMICOS
@@ -177,8 +177,19 @@ function setupDynamicCronJobs() {
     
     // Reset diário sempre às 00:00 UTC
     const resetJob = cron.schedule('0 0 * * *', () => {
+        const beforeReset = {
+            dailyMessageCount: dailyMessageCount,
+            twilioLimitReached: twilioLimitReached
+        };
+        
         dailyMessageCount = 0;
         twilioLimitReached = false;
+        
+        console.log('🔄 === RESET AUTOMÁTICO DIÁRIO ===');
+        console.log(`   Horário: ${new Date().toISOString()} (00:00 UTC)`);
+        console.log(`   Brasil: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (21:00)`);
+        console.log(`   Antes: ${beforeReset.dailyMessageCount} mensagens, Twilio: ${beforeReset.twilioLimitReached}`);
+        console.log(`   Depois: ${dailyMessageCount} mensagens, Twilio: ${twilioLimitReached}`);
         console.log('🔄 Contador de mensagens e flag Twilio resetados para novo dia');
     }, {
         timezone: "UTC",
@@ -638,6 +649,83 @@ _${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}_`;
     }
 });
 
+// 🚨 NOVO: ENDPOINT DE EMERGÊNCIA PARA RESETAR LIMITE TWILIO
+app.post('/admin/reset-twilio', (req, res) => {
+    const { password } = req.body;
+    
+    if (password !== CONFIG.schedules.adminPassword) {
+        return res.status(401).json({
+            success: false,
+            error: 'Senha administrativa incorreta'
+        });
+    }
+    
+    const beforeReset = {
+        dailyMessageCount: dailyMessageCount,
+        twilioLimitReached: twilioLimitReached
+    };
+    
+    // FORÇAR RESET MANUAL
+    dailyMessageCount = 0;
+    twilioLimitReached = false;
+    
+    console.log('🔄 RESET MANUAL EXECUTADO:');
+    console.log(`   Antes: ${beforeReset.dailyMessageCount} mensagens, Twilio: ${beforeReset.twilioLimitReached}`);
+    console.log(`   Depois: ${dailyMessageCount} mensagens, Twilio: ${twilioLimitReached}`);
+    
+    res.json({
+        success: true,
+        message: 'Reset manual executado com sucesso!',
+        before: beforeReset,
+        after: {
+            dailyMessageCount: dailyMessageCount,
+            twilioLimitReached: twilioLimitReached
+        },
+        timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+        version: '2.4.1'
+    });
+});
+
+// 🔍 NOVO: ENDPOINT PARA DIAGNÓSTICO DO SISTEMA
+app.get('/admin/diagnostic', (req, res) => {
+    const now = new Date();
+    const brasilTime = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const utcTime = now.toISOString();
+    
+    res.json({
+        success: true,
+        diagnostic: {
+            currentTime: {
+                brasil: brasilTime,
+                utc: utcTime,
+                timezone: 'America/Sao_Paulo'
+            },
+            limits: {
+                dailyMessageCount: dailyMessageCount,
+                maxDailyMessages: MAX_DAILY_MESSAGES,
+                twilioLimitReached: twilioLimitReached,
+                percentage: `${Math.round((dailyMessageCount / MAX_DAILY_MESSAGES) * 100)}%`
+            },
+            cronJobs: {
+                total: activeCronJobs.length,
+                expected: 3,
+                status: activeCronJobs.length === 3 ? 'OK' : 'PROBLEMA'
+            },
+            nextReset: {
+                utc: '00:00 UTC',
+                brasil: '21:00 Brasil',
+                description: 'Reset automático diário'
+            },
+            recommendations: [
+                dailyMessageCount >= MAX_DAILY_MESSAGES ? 'Limite interno atingido - aguardar reset' : 'Limite interno OK',
+                twilioLimitReached ? 'Flag Twilio bloqueada - usar /admin/reset-twilio' : 'Flag Twilio OK',
+                activeCronJobs.length !== 3 ? 'Problema nos cron jobs - verificar logs' : 'Cron jobs OK'
+            ]
+        },
+        version: '2.4.1'
+    });
+});
+
 // 📊 NOVO: ENDPOINT PARA VER HORÁRIOS ATUAIS
 app.get('/admin/current-schedules', (req, res) => {
     const scheduleInfo = getCurrentScheduleInfo();
@@ -780,6 +868,12 @@ app.get('/admin', (req, res) => {
                     </div>
                     <p><strong>Cron Jobs Ativos:</strong> ${activeCronJobs.length}</p>
                     <p><strong>Senha Admin:</strong> ${CONFIG.schedules.adminPassword}</p>
+                    ${twilioLimitReached ? `
+                    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #dc3545;">
+                        <strong>⚠️ TWILIO BLOQUEADO</strong><br>
+                        <small>Use o botão "Reset Emergência" abaixo se necessário</small>
+                    </div>
+                    ` : ''}
                 </div>
                 
                 <form id="scheduleForm">
@@ -800,6 +894,14 @@ app.get('/admin', (req, res) => {
                     
                     <button type="submit">🔄 Atualizar Horários</button>
                 </form>
+                
+                ${twilioLimitReached ? `
+                <div style="margin-top: 20px;">
+                    <button onclick="resetTwilio()" style="background: linear-gradient(45deg, #dc3545, #c82333); width: 100%;">
+                        🚨 Reset Emergência Twilio
+                    </button>
+                </div>
+                ` : ''}
                 
                 <div id="alert" class="alert"></div>
                 
@@ -858,6 +960,44 @@ app.get('/admin', (req, res) => {
                     // Limpar senha
                     document.getElementById('password').value = '';
                 });
+                
+                // NOVA FUNÇÃO: Reset Emergência Twilio
+                async function resetTwilio() {
+                    const password = prompt('Digite a senha administrativa:', '${CONFIG.schedules.adminPassword}');
+                    if (!password) return;
+                    
+                    const alert = document.getElementById('alert');
+                    
+                    try {
+                        const response = await fetch('/admin/reset-twilio', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ password: password })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert.className = 'alert success';
+                            alert.innerHTML = '✅ Reset Twilio executado com sucesso!<br>Página será recarregada em 2 segundos...';
+                            alert.style.display = 'block';
+                            
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            alert.className = 'alert error';
+                            alert.innerHTML = '❌ ' + result.error;
+                            alert.style.display = 'block';
+                        }
+                    } catch (error) {
+                        alert.className = 'alert error';
+                        alert.innerHTML = '❌ Erro ao resetar: ' + error.message;
+                        alert.style.display = 'block';
+                    }
+                }
             </script>
         </body>
         </html>
@@ -1588,6 +1728,11 @@ app.get('/', async (req, res) => {
                             <div class="endpoint-title">/admin/current-schedules</div>
                             <div class="endpoint-desc">Ver horários atuais em JSON</div>
                         </a>
+                        <a href="/admin/diagnostic" class="endpoint-card">
+                            <div class="endpoint-icon">🔍</div>
+                            <div class="endpoint-title">/admin/diagnostic</div>
+                            <div class="endpoint-desc">Diagnóstico completo do sistema</div>
+                        </a>
                     </div>
                 </div>
                 
@@ -2103,7 +2248,9 @@ app.use('*', (req, res) => {
             'GET /ping',
             'GET /debug',
             'GET /admin/current-schedules',
+            'GET /admin/diagnostic',
             'POST /admin/update-schedules',
+            'POST /admin/reset-twilio',
             'POST /webhook'
         ],
         version: '2.4.1',
@@ -2125,8 +2272,21 @@ async function startServer() {
         console.log(`📅 Data/Hora Brasil: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
         console.log(`🕐 Data/Hora UTC: ${new Date().toISOString()}`);
         
+        // VERIFICAÇÃO INICIAL DAS FLAGS
+        console.log('\n🔍 === VERIFICAÇÃO INICIAL DAS FLAGS ===');
+        console.log(`   dailyMessageCount: ${dailyMessageCount}`);
+        console.log(`   twilioLimitReached: ${twilioLimitReached}`);
+        console.log(`   MAX_DAILY_MESSAGES: ${MAX_DAILY_MESSAGES}`);
+        
+        // Se o servidor reiniciou, garantir que as flags estejam corretas
+        if (dailyMessageCount === 0 && twilioLimitReached === true) {
+            console.log('⚠️ Flag Twilio inconsistente detectada - corrigindo...');
+            twilioLimitReached = false;
+            console.log('✅ Flag Twilio corrigida para false');
+        }
+        
         // Inicializar Firebase
-        console.log('🔥 Conectando ao Firebase...');
+        console.log('\n🔥 Conectando ao Firebase...');
         const firebaseConnected = await initializeFirebase();
         
         if (!firebaseConnected) {
@@ -2134,9 +2294,11 @@ async function startServer() {
         }
         
         // Configurar cron jobs dinâmicos
+        console.log('\n⏰ Configurando cron jobs dinâmicos...');
         const scheduleInfo = setupDynamicCronJobs();
         
         // Iniciar keep-alive
+        console.log('\n🔄 Iniciando keep-alive...');
         startKeepAlive();
         
         // Iniciar servidor
@@ -2158,14 +2320,21 @@ async function startServer() {
             console.log(`   📱 Interface: /admin`);
             console.log(`   🔧 API: POST /admin/update-schedules`);
             console.log(`   📊 Status: GET /admin/current-schedules`);
+            console.log(`   🔍 Diagnóstico: GET /admin/diagnostic`);
+            console.log(`   🚨 Reset Emergência: POST /admin/reset-twilio`);
             console.log(`   🔑 Senha atual: ${CONFIG.schedules.adminPassword}`);
             console.log(`   🎯 Cron Jobs Ativos: ${activeCronJobs.length}`);
+            console.log(`\n📊 STATUS INICIAL:`);
+            console.log(`   Mensagens hoje: ${dailyMessageCount}/${MAX_DAILY_MESSAGES}`);
+            console.log(`   Flag Twilio: ${twilioLimitReached ? 'BLOQUEADA' : 'LIBERADA'}`);
+            console.log(`   Sistema: ${twilioLimitReached ? 'TRAVADO' : 'OPERACIONAL'}`);
             console.log(`\n✅ Sistema com horários dinâmicos funcionando!`);
             console.log(`🎖️ Sistema PM v2.4.1 pronto para funcionar 24/7!`);
             console.log(`📋 Próxima verificação: ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}`);
             console.log(`💡 DUAL FORMAT: Reconhece automaticamente formato da data`);
             console.log(`🛡️ CONTROLE TWILIO: Bloqueio automático se limite atingido`);
             console.log(`🕘 HORÁRIOS DINÂMICOS: Altere via /admin quando necessário`);
+            console.log(`🚨 RESET EMERGÊNCIA: Use /admin/reset-twilio se flag travar`);
             console.log(`\n=== SISTEMA OPERACIONAL v2.4.1 ===\n`);
         });
         
