@@ -1,4 +1,4 @@
-// server.js - Sistema PM CORRIGIDO para 08:30 e 08:35 Brasil (Render UTC)
+// server.js - Sistema PM CORRIGIDO para 08:50 e 08:55 Brasil (Render UTC)
 const express = require('express');
 const cron = require('node-cron');
 
@@ -23,7 +23,7 @@ const CONFIG = {
     },
     notification: {
         timing: process.env.NOTIFICATION_TIMING || '1-day',
-        sendTime: process.env.NOTIFICATION_TIME || '08:30-08:35'
+        sendTime: process.env.NOTIFICATION_TIME || '08:50-08:55'
     },
     keepAlive: {
         enabled: process.env.KEEP_ALIVE_ENABLED !== 'false',
@@ -210,11 +210,11 @@ function createBirthdayMessage(birthday, periodo = 'padrão') {
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     // Ajustar descrição do período para novos horários
-    const periodoEmoji = periodo === '08:30' ? '🌙' : 
-                        periodo === '08:35' ? '🌅' : '🎂';
+    const periodoEmoji = periodo === '08:50' ? '🌙' : 
+                        periodo === '08:55' ? '🌅' : '🎂';
     
-    const periodoTexto = periodo === '08:30' ? '(Lembrete 08:30)' : 
-                        periodo === '08:35' ? '(Lembrete 08:35)' : 
+    const periodoTexto = periodo === '08:50' ? '(Lembrete 08:50)' : 
+                        periodo === '08:55' ? '(Lembrete 08:55)' : 
                         '(Lembrete Automático)';
     
     return `${periodoEmoji} *LEMBRETE DE ANIVERSÁRIO PM* 🎖️
@@ -232,7 +232,7 @@ ${birthday.unit ? `🏢 *Unidade:* ${birthday.unit}` : ''}
 💐 *Sugestões:* Ligação, mensagem, presente ou visita
 
 ---
-_Sistema PM 24/7 - ${periodo === '08:30' ? '08:30' : periodo === '08:35' ? '08:35' : 'Automático'}_ 🎖️
+_Sistema PM 24/7 - ${periodo === '08:50' ? '08:50' : periodo === '08:55' ? '08:55' : 'Automático'}_ 🎖️
 _${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}_`;
 }
 
@@ -265,7 +265,7 @@ async function executeAutomaticCheck(periodo = 'padrão') {
                 
                 const testMessage = `🧪 *TESTE SISTEMA PM ${periodo.toUpperCase()}* 🎖️
 
-⏰ *Execução:* ${periodo === '08:30' ? '08:30 Brasil (02:58 UTC)' : periodo === '08:35' ? '08:35 Brasil (02:59 UTC)' : 'Automático'}
+⏰ *Execução:* ${periodo === '08:50' ? '08:50 Brasil (02:58 UTC)' : periodo === '08:55' ? '08:55 Brasil (02:59 UTC)' : 'Automático'}
 📋 *Aniversários no banco:* ${allBirthdays.length}
 🔍 *Verificado para amanhã:* 0 aniversários
 🗓️ *Data verificada:* ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}
@@ -330,7 +330,7 @@ _Sistema PM 24/7 operacional_ 🚀`;
 ${tomorrowBirthdays.map((b, i) => `${i + 1}. ${b.graduation} ${b.name} (${calculateAge(b.date) + 1} anos)`).join('\n')}
 
 📱 *Lembretes enviados:* ${successCount}/${tomorrowBirthdays.length}
-⏰ *Período:* ${periodo === '08:30' ? '08:30 Brasil' : periodo === '08:35' ? '08:35 Brasil' : periodo}
+⏰ *Período:* ${periodo === '08:50' ? '08:50 Brasil' : periodo === '08:55' ? '08:55 Brasil' : periodo}
 
 🎁 *Não esqueça de parabenizar todos amanhã!*
 
@@ -364,23 +364,23 @@ _Sistema PM - Alerta de Erro_ ⚠️`;
     }
 }
 
-// 🕘 CONFIGURAR CRON JOBS (CORRIGIDO para 08:30 e 08:35 Brasil no Render UTC) [[2]](#__2)
-console.log('⏰ Configurando cron jobs para 08:30 e 08:35 Brasil...');
+// 🕘 CONFIGURAR CRON JOBS (CORRIGIDO para 08:50 e 08:55 Brasil no Render UTC) [[2]](#__2)
+console.log('⏰ Configurando cron jobs para 08:50 e 08:55 Brasil...');
 
-// 08:30 Brasil = 02:58 UTC (próximo dia) - Verificação 1 [[3]](#__3)
-cron.schedule('58 2 * * *', () => {
+// 08:50 Brasil = 02:58 UTC (próximo dia) - Verificação 1 [[3]](#__3)
+cron.schedule('50 11 * * *', () => {
     const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    console.log(`🌙 EXECUÇÃO 08:30 BRASIL (02:58 UTC) - ${brasilTime}`);
-    executeAutomaticCheck('08:30');
+    console.log(`🌙 EXECUÇÃO 08:50 BRASIL (02:58 UTC) - ${brasilTime}`);
+    executeAutomaticCheck('08:50');
 }, {
     timezone: "UTC"  // Render usa UTC
 });
 
-// 08:35 Brasil = 02:59 UTC (próximo dia) - Verificação 2
-cron.schedule('59 2 * * *', () => {
+// 08:55 Brasil = 02:59 UTC (próximo dia) - Verificação 2
+cron.schedule('55 11 * * *', () => {
     const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    console.log(`🌅 EXECUÇÃO 08:35 BRASIL (02:59 UTC) - ${brasilTime}`);
-    executeAutomaticCheck('08:35');
+    console.log(`🌅 EXECUÇÃO 08:55 BRASIL (02:59 UTC) - ${brasilTime}`);
+    executeAutomaticCheck('08:55');
 }, {
     timezone: "UTC"  // Render usa UTC
 });
@@ -394,8 +394,8 @@ cron.schedule('0 */2 * * *', () => {
 });
 
 console.log(`⏰ Cron jobs configurados para Render (UTC):`);
-console.log(`   🌙 02:58 UTC = 08:30 Brasil (Verificação 1)`);
-console.log(`   🌅 02:59 UTC = 08:35 Brasil (Verificação 2)`);
+console.log(`   🌙 02:58 UTC = 08:50 Brasil (Verificação 1)`);
+console.log(`   🌅 02:59 UTC = 08:55 Brasil (Verificação 2)`);
 console.log(`   🔄 Keep-alive a cada 2 horas UTC`);
 
 // 🌐 ROTAS WEB
@@ -456,7 +456,7 @@ app.get('/', async (req, res) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Sistema PM 24/7 - 08:30/08:35</title>
+            <title>Sistema PM 24/7 - 08:50/08:55</title>
             <meta charset="UTF-8">
             <style>
                 body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
@@ -471,7 +471,7 @@ app.get('/', async (req, res) => {
         </head>
         <body>
             <div class="header">
-                <h1>🎖️ Sistema PM 24/7 - 08:30/08:35!</h1>
+                <h1>🎖️ Sistema PM 24/7 - 08:50/08:55!</h1>
                 <p>Sistema de Aniversários da Polícia Militar</p>
             </div>
             
@@ -487,8 +487,8 @@ app.get('/', async (req, res) => {
             
             <div class="timezone">
                 <h4>🌍 Conversão de Timezone (Brasil → UTC):</h4>
-                <p>• <strong>08:30 Brasil</strong> = <strong>02:58 UTC</strong> (próximo dia)</p>
-                <p>• <strong>08:35 Brasil</strong> = <strong>02:59 UTC</strong> (próximo dia)</p>
+                <p>• <strong>08:50 Brasil</strong> = <strong>02:58 UTC</strong> (próximo dia)</p>
+                <p>• <strong>08:55 Brasil</strong> = <strong>02:59 UTC</strong> (próximo dia)</p>
                 <p><small>Brasil UTC-3 | Render usa UTC</small></p>
             </div>
             
@@ -497,16 +497,16 @@ app.get('/', async (req, res) => {
             <div class="executions">
                 <h3>⏰ Execuções Automáticas:</h3>
                 <ul>
-                    <li>🌙 <strong>08:30 Brasil (02:58 UTC)</strong> - Primeira verificação</li>
-                    <li>🌅 <strong>08:35 Brasil (02:59 UTC)</strong> - Segunda verificação</li>
+                    <li>🌙 <strong>08:50 Brasil (02:58 UTC)</strong> - Primeira verificação</li>
+                    <li>🌅 <strong>08:55 Brasil (02:59 UTC)</strong> - Segunda verificação</li>
                 </ul>
                 <p><small>📅 <strong>Verificando para amanhã:</strong> ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}</small></p>
             </div>
             
             <h3>🔧 Endpoints Disponíveis:</h3>
             <div class="endpoint"><a href="/test">🧪 /test</a> - Testar WhatsApp</div>
-            <div class="endpoint"><a href="/test-2358">🌙 /test-2358</a> - Testar execução 08:30</div>
-            <div class="endpoint"><a href="/test-2359">🌅 /test-2359</a> - Testar execução 08:35</div>
+            <div class="endpoint"><a href="/test-2358">🌙 /test-2358</a> - Testar execução 08:50</div>
+            <div class="endpoint"><a href="/test-2359">🌅 /test-2359</a> - Testar execução 08:55</div>
             <div class="endpoint"><a href="/birthdays">📋 /birthdays</a> - Ver todos os aniversários</div>
             <div class="endpoint"><a href="/check">🔍 /check</a> - Verificar agora (manual)</div>
             <div class="endpoint"><a href="/status">📊 /status</a> - Status JSON completo</div>
@@ -514,7 +514,7 @@ app.get('/', async (req, res) => {
             
             <hr>
             <p><small>💡 <strong>Sistema integrado:</strong> Firebase + Twilio + Render FREE funcionando 24/7</small></p>
-            <p><small>🔧 <strong>Versão:</strong> 2.2.0 - 08:30/08:35 Brasil (UTC Render)</small></p>
+            <p><small>🔧 <strong>Versão:</strong> 2.2.0 - 08:50/08:55 Brasil (UTC Render)</small></p>
         </body>
         </html>
     `);
@@ -541,8 +541,8 @@ app.get('/test', async (req, res) => {
 ${tomorrowBirthdays.length > 0 ? `• 🎖️ ${tomorrowBirthdays.map(b => `${b.graduation} ${b.name}`).join(', ')}` : ''}
 
 ⏰ *Execuções Automáticas:*
-• 🌙 08:30 Brasil (02:58 UTC) - Verificação 1
-• 🌅 08:35 Brasil (02:59 UTC) - Verificação 2
+• 🌙 08:50 Brasil (02:58 UTC) - Verificação 1
+• 🌅 08:55 Brasil (02:59 UTC) - Verificação 2
 
 ✅ *Sistema PM integrado funcionando perfeitamente!*
 
@@ -569,13 +569,13 @@ _Teste manual com dados reais - v2.2.0_ 🚀`;
     }
 });
 
-// Teste específico para 08:30
+// Teste específico para 08:50
 app.get('/test-2358', async (req, res) => {
     try {
-        await executeAutomaticCheck('08:30');
+        await executeAutomaticCheck('08:50');
         res.json({ 
             success: true, 
-            message: 'Teste 08:30 Brasil (02:58 UTC) executado!',
+            message: 'Teste 08:50 Brasil (02:58 UTC) executado!',
             timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             utc: new Date().toISOString(),
             timezone: 'America/Sao_Paulo → UTC',
@@ -586,13 +586,13 @@ app.get('/test-2358', async (req, res) => {
     }
 });
 
-// Teste específico para 08:35
+// Teste específico para 08:55
 app.get('/test-2359', async (req, res) => {
     try {
-        await executeAutomaticCheck('08:35');
+        await executeAutomaticCheck('08:55');
         res.json({ 
             success: true, 
-            message: 'Teste 08:35 Brasil (02:59 UTC) executado!',
+            message: 'Teste 08:55 Brasil (02:59 UTC) executado!',
             timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             utc: new Date().toISOString(),
             timezone: 'America/Sao_Paulo → UTC',
@@ -682,8 +682,8 @@ app.get('/status', async (req, res) => {
                 utc: new Date().toISOString(),
                 renderTimezone: 'UTC',
                 conversion: {
-                    '08:30_Brasil': '02:58_UTC_next_day',
-                    '08:35_Brasil': '02:59_UTC_next_day'
+                    '08:50_Brasil': '02:58_UTC_next_day',
+                    '08:55_Brasil': '02:59_UTC_next_day'
                 }
             },
             firebase: {
@@ -697,8 +697,8 @@ app.get('/status', async (req, res) => {
                 toNumber: CONFIG.twilio.toNumber
             },
             cronJobs: {
-                '02:58_UTC': '08:30 Brasil - Verificação 1',
-                '02:59_UTC': '08:35 Brasil - Verificação 2',
+                '02:58_UTC': '08:50 Brasil - Verificação 1',
+                '02:59_UTC': '08:55 Brasil - Verificação 2',
                 keepAlive: 'A cada 2 horas UTC'
             },
             keepAlive: {
@@ -772,8 +772,8 @@ async function startServer() {
             console.log(`🔥 Firebase: ${firebaseConnected ? 'Conectado ✅' : 'Desconectado ❌'}`);
             console.log(`📱 WhatsApp: ${CONFIG.twilio.toNumber}`);
             console.log(`\n⏰ CRON JOBS ATIVOS:`);
-            console.log(`   🌙 02:58 UTC = 08:30 Brasil (Verificação 1)`);
-            console.log(`   🌅 02:59 UTC = 08:35 Brasil (Verificação 2)`);
+            console.log(`   🌙 02:58 UTC = 08:50 Brasil (Verificação 1)`);
+            console.log(`   🌅 02:59 UTC = 08:55 Brasil (Verificação 2)`);
             console.log(`   🔄 Keep-alive: a cada 2 horas UTC`);
             console.log(`\n🎖️ Sistema PM pronto para funcionar 24/7!`);
             console.log(`📋 Próxima verificação: ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}`);
