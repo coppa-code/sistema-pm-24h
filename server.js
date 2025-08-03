@@ -23,7 +23,7 @@ const CONFIG = {
     },
     notification: {
         timing: process.env.NOTIFICATION_TIMING || '1-day',
-        sendTime: process.env.NOTIFICATION_TIME || '23:10'
+        sendTime: process.env.NOTIFICATION_TIME || '23:51'
     },
     keepAlive: {
         enabled: process.env.KEEP_ALIVE_ENABLED !== 'false',
