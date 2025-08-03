@@ -19,7 +19,7 @@ const CONFIG = {
         accountSid: process.env.TWILIO_ACCOUNT_SID || 'ACbdbb222bea4e9a291bf7b7fe53ed07c1',
         authToken: process.env.TWILIO_AUTH_TOKEN || 'fc025f744ef00c1986053eac8fd183ee',
         fromNumber: process.env.TWILIO_FROM_NUMBER || 'whatsapp:+14155238886',
-        toNumber: process.env.TWILIO_TO_NUMBER || '+557181478028'
+        toNumber: process.env.TWILIO_TO_NUMBER || 'whatsapp:+557181478028' // CORRIGIDO: adicionado whatsapp:
     },
     notification: {
         timing: process.env.NOTIFICATION_TIMING || '1-day',
@@ -33,10 +33,14 @@ const CONFIG = {
 
 // 🔥 INICIALIZAR FIREBASE
 let db = null;
+let firebaseModules = null;
+
 async function initializeFirebase() {
     try {
         const { initializeApp } = await import('firebase/app');
         const { getFirestore, collection, getDocs, query, orderBy } = await import('firebase/firestore');
+        
+        firebaseModules = { collection, getDocs, query, orderBy };
         
         const firebaseApp = initializeApp(CONFIG.firebase);
         db = getFirestore(firebaseApp);
@@ -58,7 +62,11 @@ function startKeepAlive() {
 
     setInterval(async () => {
         try {
-            console.log(`🔄 Keep-alive ativo - ${new Date().toLocaleTimeString('pt-BR')}`);
+            console.log(`🔄 Keep-alive ativo - ${new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+            // Limpar cache de memória
+            if (global.gc) {
+                global.gc();
+            }
         } catch (error) {
             console.log(`🔄 Keep-alive erro: ${error.message}`);
         }
@@ -67,11 +75,29 @@ function startKeepAlive() {
     console.log(`🔄 Keep-alive iniciado: ping a cada ${CONFIG.keepAlive.interval/1000/60} minutos`);
 }
 
-// 📱 Função para enviar WhatsApp (usando fetch nativo)
+// 📱 FUNÇÃO CORRIGIDA para enviar WhatsApp
 async function sendWhatsAppMessage(to, message) {
     try {
-        const fetch = (await import('node-fetch')).default;
+        // Usar fetch nativo do Node.js 18+ ou importar node-fetch v2
+        let fetch;
+        
+        try {
+            // Tentar usar fetch nativo (Node.js 18+)
+            fetch = globalThis.fetch;
+            if (!fetch) {
+                // Fallback para node-fetch v2
+                const nodeFetch = await import('node-fetch');
+                fetch = nodeFetch.default || nodeFetch;
+            }
+        } catch (error) {
+            console.error('❌ Erro ao importar fetch:', error);
+            throw new Error('Fetch não disponível');
+        }
+
         const url = `https://api.twilio.com/2010-04-01/Accounts/${CONFIG.twilio.accountSid}/Messages.json`;
+        
+        // Garantir formato correto do número
+        const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -81,19 +107,23 @@ async function sendWhatsAppMessage(to, message) {
             },
             body: new URLSearchParams({
                 From: CONFIG.twilio.fromNumber,
-                To: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
+                To: toNumber,
                 Body: message
             })
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Twilio Error: ${error.message}`);
+            const errorText = await response.text();
+            console.error('❌ Resposta Twilio:', response.status, errorText);
+            throw new Error(`Twilio Error ${response.status}: ${errorText}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log('✅ WhatsApp enviado:', result.sid);
+        return result;
+        
     } catch (error) {
-        console.error('Erro no envio WhatsApp:', error);
+        console.error('❌ Erro detalhado no envio WhatsApp:', error);
         throw error;
     }
 }
@@ -101,12 +131,12 @@ async function sendWhatsAppMessage(to, message) {
 // 📅 BUSCAR ANIVERSÁRIOS DO FIREBASE
 async function getBirthdaysFromFirebase() {
     try {
-        if (!db) {
+        if (!db || !firebaseModules) {
             console.log('❌ Firebase não inicializado');
             return [];
         }
 
-        const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+        const { collection, getDocs, query, orderBy } = firebaseModules;
         const q = query(collection(db, 'birthdays'), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
         
@@ -140,15 +170,19 @@ function calculateAge(dateString) {
     return age > 0 ? age : 0;
 }
 
-// 📅 VERIFICAR QUEM FAZ ANIVERSÁRIO AMANHÃ
+// 📅 VERIFICAR QUEM FAZ ANIVERSÁRIO AMANHÃ (com timezone correto)
 function checkTomorrowBirthdays(birthdays) {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1); // Amanhã (03/08/2025)
+    // Usar timezone do Brasil
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     
-    const tomorrowDay = tomorrow.getDate();
-    const tomorrowMonth = tomorrow.getMonth() + 1; // +1 porque getMonth() retorna 0-11
+    // Ajustar para timezone do Brasil
+    const brasilTime = new Date(tomorrow.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
     
-    console.log(`🔍 Procurando aniversários para: ${tomorrowDay}/${tomorrowMonth.toString().padStart(2, '0')} (amanhã)`);
+    const tomorrowDay = brasilTime.getDate();
+    const tomorrowMonth = brasilTime.getMonth() + 1;
+    
+    console.log(`🔍 Procurando aniversários para: ${tomorrowDay}/${tomorrowMonth.toString().padStart(2, '0')} (amanhã - Brasil)`);
     
     const tomorrowBirthdays = birthdays.filter(birthday => {
         const birthDate = new Date(birthday.date + 'T00:00:00');
@@ -198,11 +232,13 @@ ${birthday.unit ? `🏢 *Unidade:* ${birthday.unit}` : ''}
 
 ---
 _Sistema PM 24/7 - ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}_ 🎖️
-_${new Date().toLocaleString('pt-BR')}_`;
+_${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}_`;
 }
+
 // 🤖 EXECUÇÃO PRINCIPAL - VERIFICAR ANIVERSÁRIOS REAIS
 async function executeAutomaticCheck(periodo = 'padrão') {
-    console.log(`🎖️ === EXECUÇÃO AUTOMÁTICA PM (${periodo.toUpperCase()}) === ${new Date().toLocaleString('pt-BR')}`);
+    const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    console.log(`🎖️ === EXECUÇÃO AUTOMÁTICA PM (${periodo.toUpperCase()}) === ${brasilTime}`);
     
     try {
         // Buscar todos os aniversários do Firebase
@@ -213,7 +249,7 @@ async function executeAutomaticCheck(periodo = 'padrão') {
             return;
         }
         
-        // Verificar quem faz aniversário AMANHÃ (03/08/2025)
+        // Verificar quem faz aniversário AMANHÃ
         const tomorrowBirthdays = checkTomorrowBirthdays(allBirthdays);
         
         if (tomorrowBirthdays.length === 0) {
@@ -228,12 +264,14 @@ async function executeAutomaticCheck(periodo = 'padrão') {
                 
                 const testMessage = `🧪 *TESTE SISTEMA PM ${periodo.toUpperCase()}* 🎖️
 
-⏰ *Execução:* ${periodo === 'manhã' ? '23:15 (Manhã)' : periodo === 'noite' ? '23:10 (Noite)' : 'Automático'}
+⏰ *Execução:* ${periodo === 'manhã' ? '09:00 (Manhã)' : periodo === 'noite' ? '22:40 (Noite)' : 'Automático'}
 📋 *Aniversários no banco:* ${allBirthdays.length}
 🔍 *Verificado para amanhã:* 0 aniversários
 🗓️ *Data verificada:* ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}
 
 ✅ *Sistema funcionando! Conectado ao Firebase!*
+🌍 *Timezone:* America/Sao_Paulo
+🆓 *Platform:* Render FREE
 
 ---
 _Sistema PM 24/7 operacional_ 🚀`;
@@ -309,7 +347,7 @@ _Resumo automático PM_ 🎖️`;
         try {
             const errorMessage = `❌ *ERRO SISTEMA PM* 🚨
 
-⏰ *Horário:* ${new Date().toLocaleString('pt-BR')}
+⏰ *Horário:* ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
 🔧 *Período:* ${periodo}
 ⚠️ *Erro:* ${error.message}
 
@@ -325,19 +363,22 @@ _Sistema PM - Alerta de Erro_ ⚠️`;
     }
 }
 
-// 🕘 CONFIGURAR CRON JOBS
-// Executa todos os dias às 09:00 (manhã)
-const cronTimeMorning = `0 ${CONFIG.notification.sendTime.split(':')[1]} ${CONFIG.notification.sendTime.split(':')[0]} * * *`;
-cron.schedule(cronTimeMorning, () => {
-    console.log(`🌅 EXECUÇÃO MANHÃ (23:15) - ${new Date().toLocaleString('pt-BR')}`);
+// 🕘 CONFIGURAR CRON JOBS (CORRIGIDO para Render)
+console.log('⏰ Configurando cron jobs...');
+
+// Executa todos os dias às 09:00 (manhã) - horário do Brasil
+cron.schedule('0 9 * * *', () => {
+    const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    console.log(`🌅 EXECUÇÃO MANHÃ (09:00) - ${brasilTime}`);
     executeAutomaticCheck('manhã');
 }, {
     timezone: "America/Sao_Paulo"
 });
 
-// Executa todos os dias às 22:40 (noite)
+// Executa todos os dias às 22:40 (noite) - horário do Brasil
 cron.schedule('40 22 * * *', () => {
-    console.log(`🌙 EXECUÇÃO NOITE (23:10) - ${new Date().toLocaleString('pt-BR')}`);
+    const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    console.log(`🌙 EXECUÇÃO NOITE (22:40) - ${brasilTime}`);
     executeAutomaticCheck('noite');
 }, {
     timezone: "America/Sao_Paulo"
@@ -345,7 +386,10 @@ cron.schedule('40 22 * * *', () => {
 
 // Verificação a cada 2 horas para manter ativo
 cron.schedule('0 */2 * * *', () => {
-    console.log(`🔍 Sistema ativo (verificação) - ${new Date().toLocaleString('pt-BR')}`);
+    const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    console.log(`🔍 Sistema ativo (verificação) - ${brasilTime}`);
+}, {
+    timezone: "America/Sao_Paulo"
 });
 
 // 🌐 ROTAS WEB
@@ -355,9 +399,11 @@ app.use(express.json());
 app.get('/ping', (req, res) => {
     res.json({ 
         status: 'alive', 
-        timestamp: new Date().toLocaleString('pt-BR'),
+        timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
         uptime: process.uptime(),
-        keepAlive: CONFIG.keepAlive.enabled
+        keepAlive: CONFIG.keepAlive.enabled,
+        memory: process.memoryUsage(),
+        timezone: 'America/Sao_Paulo'
     });
 });
 
@@ -403,6 +449,7 @@ app.get('/', async (req, res) => {
         <html>
         <head>
             <title>Sistema PM 24/7</title>
+            <meta charset="UTF-8">
             <style>
                 body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
                 .header { text-align: center; background: #007bff; color: white; padding: 20px; border-radius: 10px; }
@@ -421,20 +468,21 @@ app.get('/', async (req, res) => {
             
             <div class="status">
                 <p><strong>Status:</strong> ✅ Online (Render FREE + Firebase)</p>
-                <p><strong>Horário:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                <p><strong>Horário Brasil:</strong> ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
                 <p><strong>Uptime:</strong> ${hours}h ${minutes}m</p>
                 <p><strong>Keep-alive:</strong> ${CONFIG.keepAlive.enabled ? '✅ Ativo' : '❌ Desabilitado'}</p>
                 <p><strong>Firebase:</strong> ${db ? '✅ Conectado' : '❌ Desconectado'}</p>
                 <p><strong>Destinatário:</strong> ${CONFIG.twilio.toNumber}</p>
+                <p><strong>Timezone:</strong> America/Sao_Paulo</p>
             </div>
             
             ${birthdayInfo}
             
             <div class="executions">
-                <h3>⏰ Execuções Automáticas:</h3>
+                <h3>⏰ Execuções Automáticas (Horário Brasil):</h3>
                 <ul>
-                    <li>🌅 <strong>23:15</strong> - Verificação matinal (busca aniversários de amanhã)</li>
-                    <li>🌙 <strong>23:10</strong> - Verificação noturna (segunda verificação)</li>
+                    <li>🌅 <strong>09:00</strong> - Verificação matinal (busca aniversários de amanhã)</li>
+                    <li>🌙 <strong>22:40</strong> - Verificação noturna (segunda verificação)</li>
                 </ul>
                 <p><small>📅 <strong>Verificando para amanhã:</strong> ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}</small></p>
             </div>
@@ -450,6 +498,7 @@ app.get('/', async (req, res) => {
             
             <hr>
             <p><small>💡 <strong>Sistema integrado:</strong> Firebase + Twilio + Render FREE funcionando 24/7</small></p>
+            <p><small>🔧 <strong>Versão:</strong> 2.1.0 - Corrigido para Render</small></p>
         </body>
         </html>
     `);
@@ -464,7 +513,7 @@ app.get('/test', async (req, res) => {
         
         const testMessage = `🧪 *TESTE SISTEMA PM + FIREBASE* 🎖️
 
-⏰ *Horário:* ${new Date().toLocaleString('pt-BR')}
+⏰ *Horário Brasil:* ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
 🆓 *Plataforma:* Render FREE
 🔥 *Firebase:* ${db ? 'Conectado ✅' : 'Desconectado ❌'}
 📱 *WhatsApp:* Conectado via Twilio
@@ -474,14 +523,14 @@ app.get('/test', async (req, res) => {
 • 🎂 Amanhã (${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}): ${tomorrowBirthdays.length} aniversário(s)
 ${tomorrowBirthdays.length > 0 ? `• 🎖️ ${tomorrowBirthdays.map(b => `${b.graduation} ${b.name}`).join(', ')}` : ''}
 
-⏰ *Execuções Automáticas:*
-• 🌅 23:15 - Verificação matinal
-• 🌙 23:10 - Verificação noturna
+⏰ *Execuções Automáticas (Brasil):*
+• 🌅 09:00 - Verificação matinal
+• 🌙 22:40 - Verificação noturna
 
 ✅ *Sistema PM integrado funcionando perfeitamente!*
 
 ---
-_Teste manual com dados reais_ 🚀`;
+_Teste manual com dados reais - v2.1.0_ 🚀`;
 
         const result = await sendWhatsAppMessage(CONFIG.twilio.toNumber, testMessage);
         res.json({ 
@@ -493,19 +542,21 @@ _Teste manual com dados reais_ 🚀`;
                 totalBirthdays: birthdays.length,
                 tomorrowBirthdays: tomorrowBirthdays.length
             },
-            timestamp: new Date().toLocaleString('pt-BR'),
-            platform: 'Render FREE + Firebase'
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+            platform: 'Render FREE + Firebase',
+            version: '2.1.0'
         });
     } catch (error) {
         res.status(500).json({ 
             success: false, 
             error: error.message,
-            timestamp: new Date().toLocaleString('pt-BR')
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
         });
     }
 });
 
 // Endpoint para verificação manual
+// Continuação do endpoint /check
 app.get('/check', async (req, res) => {
     try {
         const periodo = req.query.periodo || 'manual';
@@ -513,13 +564,13 @@ app.get('/check', async (req, res) => {
         res.json({ 
             success: true, 
             message: `Verificação ${periodo} executada com sucesso!`,
-            timestamp: new Date().toLocaleString('pt-BR')
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
         });
     } catch (error) {
         res.status(500).json({ 
             success: false, 
             error: error.message,
-            timestamp: new Date().toLocaleString('pt-BR')
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
         });
     }
 });
@@ -535,7 +586,7 @@ app.get('/status', async (req, res) => {
             status: 'online',
             platform: 'Render FREE',
             keepAlive: CONFIG.keepAlive.enabled,
-            timestamp: new Date().toLocaleString('pt-BR'),
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             timezone: 'America/Sao_Paulo',
             firebase: {
                 connected: db !== null,
@@ -550,26 +601,26 @@ app.get('/status', async (req, res) => {
             config: {
                 timing: CONFIG.notification.timing,
                 executions: [
-                    { time: '23:15', description: 'Verificação matinal' },
-                    { time: '23:10', description: 'Verificação noturna' }
+                    { time: '09:00', description: 'Verificação matinal' },
+                    { time: '22:40', description: 'Verificação noturna' }
                 ],
                 toNumber: CONFIG.twilio.toNumber
             },
             uptime: process.uptime(),
             memory: process.memoryUsage(),
-            version: '2.0.0 - Firebase + Dupla Execução'
+            version: '2.1.0 - Corrigido para Render'
         });
     } catch (error) {
         res.json({
             status: 'online',
             error: error.message,
             firebase: { connected: false },
-            timestamp: new Date().toLocaleString('pt-BR')
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
         });
     }
 });
 
-// Novo endpoint: listar aniversários
+// Endpoint: listar aniversários
 app.get('/birthdays', async (req, res) => {
     try {
         const birthdays = await getBirthdaysFromFirebase();
@@ -594,23 +645,25 @@ app.get('/birthdays', async (req, res) => {
                 age: calculateAge(b.date),
                 relationship: b.relationship
             })),
-            timestamp: new Date().toLocaleString('pt-BR')
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
         });
     } catch (error) {
         res.status(500).json({
             success: false,
             error: error.message,
-            timestamp: new Date().toLocaleString('pt-BR')
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
         });
     }
 });
 
 // 🚀 INICIAR SERVIDOR
 app.listen(PORT, async () => {
+    const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     console.log(`🎖️ Sistema PM iniciado na porta ${PORT}`);
+    console.log(`⏰ Horário Brasil: ${brasilTime}`);
     console.log(`⏰ Cron jobs configurados:`);
-    console.log(`   🌅 23:15 - Verificação matinal`);
-    console.log(`   🌙 23:10 - Verificação noturna`);
+    console.log(`   🌅 09:00 - Verificação matinal`);
+    console.log(`   🌙 22:40 - Verificação noturna`);
     console.log(`📱 Destinatário: ${CONFIG.twilio.toNumber}`);
     console.log(`🌍 Timezone: America/Sao_Paulo`);
     console.log(`🆓 Render FREE - Sistema ativo!`);
@@ -648,6 +701,7 @@ app.listen(PORT, async () => {
     startKeepAlive();
     
     console.log(`✅ SISTEMA PM COM FIREBASE E DUPLA EXECUÇÃO FUNCIONANDO!`);
+    console.log(`🔧 Versão: 2.1.0 - Corrigido para Render`);
 });
 
 // Tratamento de erros
@@ -659,4 +713,5 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('❌ Promessa rejeitada:', reason);
 });
 
-console.log('🎖️ Sistema PM carregado com sucesso!');
+console.log('🎖️ Sistema PM carregado com sucesso! Versão 2.1.0');
+
