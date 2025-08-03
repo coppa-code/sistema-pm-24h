@@ -23,7 +23,7 @@ const CONFIG = {
     },
     notification: {
         timing: process.env.NOTIFICATION_TIMING || '1-day',
-        sendTime: process.env.NOTIFICATION_TIME || '22:58'
+        sendTime: process.env.NOTIFICATION_TIME || '23:10'
     },
     keepAlive: {
         enabled: process.env.KEEP_ALIVE_ENABLED !== 'false',
@@ -228,7 +228,7 @@ async function executeAutomaticCheck(periodo = 'padrão') {
                 
                 const testMessage = `🧪 *TESTE SISTEMA PM ${periodo.toUpperCase()}* 🎖️
 
-⏰ *Execução:* ${periodo === 'manhã' ? '09:00 (Manhã)' : periodo === 'noite' ? '22:57 (Noite)' : 'Automático'}
+⏰ *Execução:* ${periodo === 'manhã' ? '23:15 (Manhã)' : periodo === 'noite' ? '23:10 (Noite)' : 'Automático'}
 📋 *Aniversários no banco:* ${allBirthdays.length}
 🔍 *Verificado para amanhã:* 0 aniversários
 🗓️ *Data verificada:* ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}
@@ -329,7 +329,7 @@ _Sistema PM - Alerta de Erro_ ⚠️`;
 // Executa todos os dias às 09:00 (manhã)
 const cronTimeMorning = `0 ${CONFIG.notification.sendTime.split(':')[1]} ${CONFIG.notification.sendTime.split(':')[0]} * * *`;
 cron.schedule(cronTimeMorning, () => {
-    console.log(`🌅 EXECUÇÃO MANHÃ (09:00) - ${new Date().toLocaleString('pt-BR')}`);
+    console.log(`🌅 EXECUÇÃO MANHÃ (23:15) - ${new Date().toLocaleString('pt-BR')}`);
     executeAutomaticCheck('manhã');
 }, {
     timezone: "America/Sao_Paulo"
@@ -337,7 +337,7 @@ cron.schedule(cronTimeMorning, () => {
 
 // Executa todos os dias às 22:40 (noite)
 cron.schedule('40 22 * * *', () => {
-    console.log(`🌙 EXECUÇÃO NOITE (22:56) - ${new Date().toLocaleString('pt-BR')}`);
+    console.log(`🌙 EXECUÇÃO NOITE (23:10) - ${new Date().toLocaleString('pt-BR')}`);
     executeAutomaticCheck('noite');
 }, {
     timezone: "America/Sao_Paulo"
@@ -433,8 +433,8 @@ app.get('/', async (req, res) => {
             <div class="executions">
                 <h3>⏰ Execuções Automáticas:</h3>
                 <ul>
-                    <li>🌅 <strong>09:00</strong> - Verificação matinal (busca aniversários de amanhã)</li>
-                    <li>🌙 <strong>22:57</strong> - Verificação noturna (segunda verificação)</li>
+                    <li>🌅 <strong>23:15</strong> - Verificação matinal (busca aniversários de amanhã)</li>
+                    <li>🌙 <strong>23:10</strong> - Verificação noturna (segunda verificação)</li>
                 </ul>
                 <p><small>📅 <strong>Verificando para amanhã:</strong> ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}</small></p>
             </div>
@@ -475,8 +475,8 @@ app.get('/test', async (req, res) => {
 ${tomorrowBirthdays.length > 0 ? `• 🎖️ ${tomorrowBirthdays.map(b => `${b.graduation} ${b.name}`).join(', ')}` : ''}
 
 ⏰ *Execuções Automáticas:*
-• 🌅 09:00 - Verificação matinal
-• 🌙 22:58 - Verificação noturna
+• 🌅 23:15 - Verificação matinal
+• 🌙 23:10 - Verificação noturna
 
 ✅ *Sistema PM integrado funcionando perfeitamente!*
 
@@ -550,8 +550,8 @@ app.get('/status', async (req, res) => {
             config: {
                 timing: CONFIG.notification.timing,
                 executions: [
-                    { time: '09:00', description: 'Verificação matinal' },
-                    { time: '22:58', description: 'Verificação noturna' }
+                    { time: '23:15', description: 'Verificação matinal' },
+                    { time: '23:10', description: 'Verificação noturna' }
                 ],
                 toNumber: CONFIG.twilio.toNumber
             },
@@ -609,8 +609,8 @@ app.get('/birthdays', async (req, res) => {
 app.listen(PORT, async () => {
     console.log(`🎖️ Sistema PM iniciado na porta ${PORT}`);
     console.log(`⏰ Cron jobs configurados:`);
-    console.log(`   🌅 09:00 - Verificação matinal`);
-    console.log(`   🌙 22:58 - Verificação noturna`);
+    console.log(`   🌅 23:15 - Verificação matinal`);
+    console.log(`   🌙 23:10 - Verificação noturna`);
     console.log(`📱 Destinatário: ${CONFIG.twilio.toNumber}`);
     console.log(`🌍 Timezone: America/Sao_Paulo`);
     console.log(`🆓 Render FREE - Sistema ativo!`);
