@@ -1,1 +1,19 @@
 
+{
+  "name": "sistema-pm-aniversarios",
+  "version": "1.0.0",
+  "description": "Sistema 24/7 de lembretes de aniversário para Polícia Militar",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "firebase": "^10.7.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
