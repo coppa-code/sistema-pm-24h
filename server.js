@@ -1,4 +1,3 @@
-
 // server.js - Sistema PM CORRIGIDO para Render
 const express = require('express');
 const cron = require('node-cron');
@@ -74,45 +73,69 @@ async function sendWhatsAppMessage(to, message) {
 }
 
 // 🤖 Simulação de verificação (sem Firebase por agora)
-async function executeAutomaticCheck() {
-    console.log(`🎖️ === EXECUÇÃO AUTOMÁTICA PM === ${new Date().toLocaleString('pt-BR')}`);
+async function executeAutomaticCheck(periodo = 'padrão') {
+    console.log(`🎖️ === EXECUÇÃO AUTOMÁTICA PM (${periodo.toUpperCase()}) === ${new Date().toLocaleString('pt-BR')}`);
     
     try {
         // Simulação - depois conectamos Firebase
-        console.log('📋 Verificando aniversários...');
-        console.log('ℹ️ Nenhuma notificação para envio hoje (modo teste)');
+        console.log(`📋 Verificando aniversários (${periodo})...`);
+        console.log(`ℹ️ Nenhuma notificação para envio hoje (modo teste - ${periodo})`);
         
-        // Teste com aniversário fictício se for sábado
+        // Teste com aniversário fictício se for sábado OU domingo (para testar mais)
         const today = new Date();
-        if (today.getDay() === 6) { // Sábado
-            console.log('🧪 Enviando teste semanal...');
-            const testMessage = `🧪 *TESTE SEMANAL SISTEMA PM* 🎖️
+        const isWeekend = today.getDay() === 6 || today.getDay() === 0; // Sábado ou Domingo
+        
+        if (isWeekend) {
+            console.log(`🧪 Enviando teste de fim de semana (${periodo})...`);
+            
+            const horarioTexto = periodo === 'manhã' ? '09:00 (Manhã)' : 
+                                periodo === 'noite' ? '22:40 (Noite)' : 
+                                'Automático';
+            
+            const emojis = periodo === 'manhã' ? '🌅☀️' : 
+                          periodo === 'noite' ? '🌙⭐' : 
+                          '🤖';
+            
+            const testMessage = `${emojis} *SISTEMA PM ${periodo.toUpperCase()}* 🎖️
 
-⏰ *Horário:* ${new Date().toLocaleString('pt-BR')}
+⏰ *Execução:* ${horarioTexto}
+🗓️ *Data:* ${new Date().toLocaleDateString('pt-BR')}
+🕒 *Horário Atual:* ${new Date().toLocaleTimeString('pt-BR')}
 🆓 *Plataforma:* Render FREE
-🔧 *Status:* Sistema funcionando automaticamente!
-📊 *Verificação:* Todo sábado + dias de aniversário
+🔧 *Status:* Funcionando automaticamente!
 
-✅ *Sistema PM operacional 24/7!*
+📊 *Dupla Verificação:*
+• 🌅 09:00 - Verificação matinal
+• 🌙 22:40 - Verificação noturna
+
+✅ *Sistema PM operacional 24/7 com dupla execução!*
 
 ---
-_Teste automático semanal_ 🚀`;
+_Execução automática ${periodo}_ 🚀`;
 
             await sendWhatsAppMessage(CONFIG.twilio.toNumber, testMessage);
-            console.log('✅ Teste semanal enviado!');
+            console.log(`✅ Teste de fim de semana (${periodo}) enviado!`);
         }
 
     } catch (error) {
-        console.error('❌ Erro na execução automática:', error);
+        console.error(`❌ Erro na execução automática (${periodo}):`, error);
     }
 }
 
 // 🕘 CONFIGURAR CRON JOBS
-// Executa todos os dias às 09:00
-const cronTime = `0 ${CONFIG.notification.sendTime.split(':')[1]} ${CONFIG.notification.sendTime.split(':')[0]} * * *`;
-cron.schedule(cronTime, () => {
-    console.log(`⏰ Executando verificação automática - ${new Date().toLocaleString('pt-BR')}`);
-    executeAutomaticCheck();
+// Executa todos os dias às 09:00 (manhã)
+const cronTimeMorning = `0 ${CONFIG.notification.sendTime.split(':')[1]} ${CONFIG.notification.sendTime.split(':')[0]} * * *`;
+cron.schedule(cronTimeMorning, () => {
+    console.log(`🌅 EXECUÇÃO MANHÃ (09:00) - ${new Date().toLocaleString('pt-BR')}`);
+    executeAutomaticCheck('manhã');
+}, {
+    timezone: "America/Sao_Paulo"
+});
+
+// Executa todos os dias às 22:40 (noite)
+cron.schedule('40 22 * * *', () => {
+    console.log(`🌙 EXECUÇÃO NOITE (22:40) - ${new Date().toLocaleString('pt-BR')}`);
+    executeAutomaticCheck('noite');
 }, {
     timezone: "America/Sao_Paulo"
 });
@@ -166,13 +189,19 @@ app.get('/', (req, res) => {
                 <p><strong>Horário:</strong> ${new Date().toLocaleString('pt-BR')}</p>
                 <p><strong>Uptime:</strong> ${hours}h ${minutes}m</p>
                 <p><strong>Keep-alive:</strong> ${CONFIG.keepAlive.enabled ? '✅ Ativo' : '❌ Desabilitado'}</p>
-                <p><strong>Configuração:</strong> ${CONFIG.notification.timing} às ${CONFIG.notification.sendTime}</p>
+                <p><strong>Execuções Automáticas:</strong></p>
+                <ul>
+                    <li>🌅 <strong>09:00</strong> - Verificação matinal</li>
+                    <li>🌙 <strong>22:40</strong> - Verificação noturna</li>
+                </ul>
                 <p><strong>Destinatário:</strong> ${CONFIG.twilio.toNumber}</p>
             </div>
             
             <h3>🔧 Endpoints Disponíveis:</h3>
             <div class="endpoint"><a href="/test">🧪 /test</a> - Testar WhatsApp</div>
-            <div class="endpoint"><a href="/check">🔍 /check</a> - Verificar agora</div>
+            <div class="endpoint"><a href="/check">🔍 /check</a> - Verificar agora (manual)</div>
+            <div class="endpoint"><a href="/check?periodo=manhã">🌅 /check?periodo=manhã</a> - Simular execução matinal</div>
+            <div class="endpoint"><a href="/check?periodo=noite">🌙 /check?periodo=noite</a> - Simular execução noturna</div>
             <div class="endpoint"><a href="/status">📊 /status</a> - Status JSON</div>
             <div class="endpoint"><a href="/ping">🔄 /ping</a> - Keep-alive</div>
             
@@ -193,7 +222,11 @@ app.get('/test', async (req, res) => {
 🔧 *Status:* Funcionando perfeitamente!
 📱 *WhatsApp:* Conectado via Twilio
 
-✅ *Sistema PM pronto para uso!*
+📊 *Execuções Automáticas:*
+• 🌅 09:00 - Verificação matinal
+• 🌙 22:40 - Verificação noturna
+
+✅ *Sistema PM com dupla execução pronto!*
 
 ---
 _Teste manual realizado_ 🚀`;
@@ -218,10 +251,11 @@ _Teste manual realizado_ 🚀`;
 // Endpoint para verificação manual
 app.get('/check', async (req, res) => {
     try {
-        await executeAutomaticCheck();
+        const periodo = req.query.periodo || 'manual';
+        await executeAutomaticCheck(periodo);
         res.json({ 
             success: true, 
-            message: 'Verificação executada com sucesso!',
+            message: `Verificação ${periodo} executada com sucesso!`,
             timestamp: new Date().toLocaleString('pt-BR')
         });
     } catch (error) {
@@ -243,28 +277,32 @@ app.get('/status', (req, res) => {
         timezone: 'America/Sao_Paulo',
         config: {
             timing: CONFIG.notification.timing,
-            sendTime: CONFIG.notification.sendTime,
+            executions: [
+                { time: '09:00', description: 'Verificação matinal' },
+                { time: '22:40', description: 'Verificação noturna' }
+            ],
             toNumber: CONFIG.twilio.toNumber
         },
         uptime: process.uptime(),
         memory: process.memoryUsage(),
-        version: '1.1.0'
+        version: '1.2.0 - Dupla Execução'
     });
 });
 
 // 🚀 INICIAR SERVIDOR
 app.listen(PORT, () => {
     console.log(`🎖️ Sistema PM iniciado na porta ${PORT}`);
-    console.log(`⏰ Cron job configurado: ${cronTime}`);
+    console.log(`⏰ Cron jobs configurados:`);
+    console.log(`   🌅 09:00 - Verificação matinal`);
+    console.log(`   🌙 22:40 - Verificação noturna`);
     console.log(`📱 Destinatário: ${CONFIG.twilio.toNumber}`);
-    console.log(`🕘 Próxima execução: ${CONFIG.notification.sendTime}`);
     console.log(`🌍 Timezone: America/Sao_Paulo`);
     console.log(`🆓 Render FREE - Sistema ativo!`);
     
     // Iniciar keep-alive
     startKeepAlive();
     
-    console.log(`✅ SISTEMA PM FUNCIONANDO!`);
+    console.log(`✅ SISTEMA PM COM DUPLA EXECUÇÃO FUNCIONANDO!`);
 });
 
 // Tratamento de erros
