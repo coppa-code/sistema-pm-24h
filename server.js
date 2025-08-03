@@ -743,6 +743,10 @@ app.get('/admin/current-schedules', (req, res) => {
 app.get('/admin', (req, res) => {
     const scheduleInfo = getCurrentScheduleInfo();
     
+    // Garantir que as variáveis estejam disponíveis no template
+    const currentTwilioStatus = twilioLimitReached;
+    const currentDailyCount = dailyMessageCount;
+    
     res.send(`
         <!DOCTYPE html>
         <html lang="pt-BR">
@@ -815,6 +819,15 @@ app.get('/admin', (req, res) => {
                 button:hover {
                     transform: translateY(-2px);
                 }
+                .reset-button {
+                    background: linear-gradient(45deg, #dc3545, #c82333) !important;
+                    animation: pulse-red 2s infinite;
+                }
+                @keyframes pulse-red {
+                    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+                    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+                }
                 .alert {
                     padding: 15px;
                     border-radius: 8px;
@@ -868,10 +881,15 @@ app.get('/admin', (req, res) => {
                     </div>
                     <p><strong>Cron Jobs Ativos:</strong> ${activeCronJobs.length}</p>
                     <p><strong>Senha Admin:</strong> ${CONFIG.schedules.adminPassword}</p>
-                    ${twilioLimitReached ? `
+                    <p><strong>Status Atual:</strong> 
+                        <span style="color: ${currentTwilioStatus ? '#dc3545' : '#28a745'}; font-weight: bold;">
+                            ${currentTwilioStatus ? '🚫 TWILIO BLOQUEADO' : '✅ SISTEMA OPERACIONAL'}
+                        </span>
+                    </p>
+                    ${currentTwilioStatus ? `
                     <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #dc3545;">
-                        <strong>⚠️ TWILIO BLOQUEADO</strong><br>
-                        <small>Use o botão "Reset Emergência" abaixo se necessário</small>
+                        <strong>⚠️ PROBLEMA DETECTADO</strong><br>
+                        <small>Flag Twilio travada com ${currentDailyCount} mensagens. Use o botão "Reset Emergência" abaixo.</small>
                     </div>
                     ` : ''}
                 </div>
@@ -895,22 +913,45 @@ app.get('/admin', (req, res) => {
                     <button type="submit">🔄 Atualizar Horários</button>
                 </form>
                 
-                ${twilioLimitReached ? `
+                <!-- BOTÃO DE RESET EMERGÊNCIA -->
                 <div style="margin-top: 20px;">
-                    <button onclick="resetTwilio()" style="background: linear-gradient(45deg, #dc3545, #c82333); width: 100%;">
+                    <button onclick="resetTwilio()" 
+                            class="reset-button"
+                            style="color: white; border: none; border-radius: 8px; 
+                                   font-size: 16px; font-weight: 600; cursor: pointer; 
+                                   transition: transform 0.2s; padding: 15px; width: 100%;">
                         🚨 Reset Emergência Twilio
                     </button>
+                    <small style="color: #666; display: block; text-align: center; margin-top: 8px;">
+                        Use este botão se o sistema estiver travado (Flag Twilio = true com 0 mensagens)
+                    </small>
+                </div>
+                
+                ${currentTwilioStatus ? `
+                <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ffc107;">
+                    <strong>💡 INSTRUÇÕES DE EMERGÊNCIA:</strong><br>
+                    1. Clique no botão "Reset Emergência Twilio" acima<br>
+                    2. Digite a senha: <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">${CONFIG.schedules.adminPassword}</code><br>
+                    3. Aguarde a confirmação e recarregamento da página
                 </div>
                 ` : ''}
                 
                 <div id="alert" class="alert"></div>
                 
                 <div style="margin-top: 30px; text-align: center; color: #666;">
-                    <p><strong>Instruções:</strong></p>
+                    <p><strong>📋 Instruções:</strong></p>
                     <p>• Use formato 24h (ex: 19:30)</p>
                     <p>• Os horários devem ser diferentes</p>
                     <p>• Conversão UTC automática</p>
                     <p>• Cron jobs recriados automaticamente</p>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: left;">
+                        <strong>🔍 Diagnóstico Atual:</strong><br>
+                        <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">dailyMessageCount: ${currentDailyCount}</code><br>
+                        <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">twilioLimitReached: ${currentTwilioStatus}</code><br>
+                        <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">activeCronJobs: ${activeCronJobs.length}/3</code><br>
+                        <small style="color: #666;">Acesse <a href="/admin/diagnostic" target="_blank">/admin/diagnostic</a> para diagnóstico completo</small>
+                    </div>
                 </div>
             </div>
             
@@ -963,10 +1004,22 @@ app.get('/admin', (req, res) => {
                 
                 // NOVA FUNÇÃO: Reset Emergência Twilio
                 async function resetTwilio() {
-                    const password = prompt('Digite a senha administrativa:', '${CONFIG.schedules.adminPassword}');
+                    // Confirmar ação
+                    if (!confirm('⚠️ Tem certeza que deseja resetar a flag Twilio?\\n\\nIsso vai desbloquear o sistema para envio de mensagens.')) {
+                        return;
+                    }
+                    
+                    const password = prompt('🔐 Digite a senha administrativa:', '${CONFIG.schedules.adminPassword}');
                     if (!password) return;
                     
                     const alert = document.getElementById('alert');
+                    
+                    // Mostrar carregamento
+                    alert.className = 'alert';
+                    alert.innerHTML = '⏳ Executando reset...';
+                    alert.style.display = 'block';
+                    alert.style.background = '#cce5ff';
+                    alert.style.color = '#004085';
                     
                     try {
                         const response = await fetch('/admin/reset-twilio', {
@@ -981,12 +1034,15 @@ app.get('/admin', (req, res) => {
                         
                         if (result.success) {
                             alert.className = 'alert success';
-                            alert.innerHTML = '✅ Reset Twilio executado com sucesso!<br>Página será recarregada em 2 segundos...';
+                            alert.innerHTML = \`✅ Reset executado com sucesso!<br>
+                                <strong>Antes:</strong> dailyCount=\${result.before.dailyMessageCount}, twilioFlag=\${result.before.twilioLimitReached}<br>
+                                <strong>Depois:</strong> dailyCount=\${result.after.dailyMessageCount}, twilioFlag=\${result.after.twilioLimitReached}<br>
+                                <em>Página será recarregada em 3 segundos...</em>\`;
                             alert.style.display = 'block';
                             
                             setTimeout(() => {
                                 window.location.reload();
-                            }, 2000);
+                            }, 3000);
                         } else {
                             alert.className = 'alert error';
                             alert.innerHTML = '❌ ' + result.error;
@@ -994,7 +1050,7 @@ app.get('/admin', (req, res) => {
                         }
                     } catch (error) {
                         alert.className = 'alert error';
-                        alert.innerHTML = '❌ Erro ao resetar: ' + error.message;
+                        alert.innerHTML = '❌ Erro de conexão: ' + error.message;
                         alert.style.display = 'block';
                     }
                 }
