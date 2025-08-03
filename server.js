@@ -205,35 +205,59 @@ function setupDynamicCronJobs() {
 
 // 🔧 NOVO: ATUALIZAR HORÁRIOS DINAMICAMENTE
 function updateSchedules(newTime1, newTime2, password) {
+    console.log(`🔧 === TENTATIVA DE ATUALIZAÇÃO DE HORÁRIOS ===`);
+    console.log(`   newTime1: ${newTime1}`);
+    console.log(`   newTime2: ${newTime2}`);
+    console.log(`   password: ${password ? '[FORNECIDA]' : '[VAZIA]'}`);
+    console.log(`   adminPassword: ${CONFIG.schedules.adminPassword}`);
+    
     // Verificar senha
     if (password !== CONFIG.schedules.adminPassword) {
+        console.log(`❌ Senha incorreta: "${password}" !== "${CONFIG.schedules.adminPassword}"`);
         throw new Error('Senha administrativa incorreta');
     }
+    console.log(`✅ Senha correta`);
     
     // Validar formato de horário
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(newTime1) || !timeRegex.test(newTime2)) {
-        throw new Error('Formato de horário inválido. Use HH:MM (ex: 19:30)');
+    if (!timeRegex.test(newTime1)) {
+        console.log(`❌ Formato time1 inválido: ${newTime1}`);
+        throw new Error(`Formato de horário 1 inválido: ${newTime1}. Use HH:MM (ex: 19:30)`);
     }
+    if (!timeRegex.test(newTime2)) {
+        console.log(`❌ Formato time2 inválido: ${newTime2}`);
+        throw new Error(`Formato de horário 2 inválido: ${newTime2}. Use HH:MM (ex: 19:30)`);
+    }
+    console.log(`✅ Formatos válidos`);
     
     // Verificar se os horários são diferentes
     if (newTime1 === newTime2) {
+        console.log(`❌ Horários iguais: ${newTime1} === ${newTime2}`);
         throw new Error('Os dois horários devem ser diferentes');
     }
+    console.log(`✅ Horários diferentes`);
     
     console.log(`🔄 ATUALIZANDO HORÁRIOS:`);
     console.log(`   Anterior: ${CONFIG.schedules.time1} e ${CONFIG.schedules.time2}`);
     console.log(`   Novo: ${newTime1} e ${newTime2}`);
     
-    // Atualizar configuração
-    CONFIG.schedules.time1 = newTime1;
-    CONFIG.schedules.time2 = newTime2;
-    
-    // Recriar cron jobs
-    const scheduleInfo = setupDynamicCronJobs();
-    
-    console.log(`✅ Horários atualizados com sucesso!`);
-    return scheduleInfo;
+    try {
+        // Atualizar configuração
+        CONFIG.schedules.time1 = newTime1;
+        CONFIG.schedules.time2 = newTime2;
+        console.log(`✅ CONFIG atualizado`);
+        
+        // Recriar cron jobs
+        console.log(`🔄 Recriando cron jobs...`);
+        const scheduleInfo = setupDynamicCronJobs();
+        console.log(`✅ Cron jobs recriados: ${activeCronJobs.length}`);
+        
+        console.log(`✅ Horários atualizados com sucesso!`);
+        return scheduleInfo;
+    } catch (error) {
+        console.error(`❌ Erro ao atualizar horários:`, error);
+        throw error;
+    }
 }
 
 // 📱 FUNÇÃO OTIMIZADA COM CONTROLE DE LIMITE TWILIO
@@ -600,19 +624,36 @@ app.use(express.json());
 
 // 🔧 NOVO: ENDPOINT ADMINISTRATIVO PARA ALTERAR HORÁRIOS
 app.post('/admin/update-schedules', async (req, res) => {
+    console.log(`📥 === RECEBIDA REQUISIÇÃO UPDATE-SCHEDULES ===`);
+    console.log(`   Body:`, req.body);
+    console.log(`   Headers:`, req.headers);
+    
     try {
         const { time1, time2, password } = req.body;
         
+        console.log(`📝 Dados extraídos:`);
+        console.log(`   time1: ${time1}`);
+        console.log(`   time2: ${time2}`);
+        console.log(`   password: ${password ? '[FORNECIDA]' : '[VAZIA]'}`);
+        
         if (!time1 || !time2 || !password) {
+            console.log(`❌ Campos obrigatórios faltando`);
             return res.status(400).json({
                 success: false,
-                error: 'Campos obrigatórios: time1, time2, password'
+                error: `Campos obrigatórios: time1 (${time1 ? '✅' : '❌'}), time2 (${time2 ? '✅' : '❌'}), password (${password ? '✅' : '❌'})`
             });
         }
         
+        console.log(`✅ Todos os campos fornecidos`);
+        console.log(`🔄 Chamando updateSchedules...`);
+        
         const scheduleInfo = updateSchedules(time1, time2, password);
         
+        console.log(`✅ updateSchedules executado com sucesso`);
+        console.log(`📊 Novo scheduleInfo:`, scheduleInfo);
+        
         // Enviar confirmação via WhatsApp
+        console.log(`📱 Tentando enviar confirmação via WhatsApp...`);
         try {
             const confirmMessage = `🔧 *HORÁRIOS ATUALIZADOS* ✅
 
@@ -628,24 +669,37 @@ _Atualização via API - v2.4.1_ 🚀
 _${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}_`;
 
             await sendWhatsAppMessage(CONFIG.twilio.toNumber, confirmMessage);
+            console.log(`✅ Confirmação WhatsApp enviada`);
         } catch (whatsappError) {
             console.log('⚠️ Erro ao enviar confirmação via WhatsApp:', whatsappError.message);
         }
         
-        res.json({
+        const response = {
             success: true,
             message: 'Horários atualizados com sucesso!',
             schedules: scheduleInfo,
+            activeCronJobs: activeCronJobs.length,
             timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             version: '2.4.1'
-        });
+        };
+        
+        console.log(`📤 Enviando resposta:`, response);
+        res.json(response);
         
     } catch (error) {
-        res.status(400).json({
+        console.error(`❌ ERRO no update-schedules:`, error);
+        console.error(`   Stack:`, error.stack);
+        
+        const errorResponse = {
             success: false,
             error: error.message,
+            details: error.stack,
+            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
             version: '2.4.1'
-        });
+        };
+        
+        console.log(`📤 Enviando erro:`, errorResponse);
+        res.status(400).json(errorResponse);
     }
 });
 
@@ -684,6 +738,58 @@ app.post('/admin/reset-twilio', (req, res) => {
         timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
         version: '2.4.1'
     });
+});
+
+// 🧪 NOVO: ENDPOINT DE TESTE PARA DEBUG DA ATUALIZAÇÃO DE HORÁRIOS
+app.post('/admin/test-update', (req, res) => {
+    console.log(`🧪 === TESTE DE ATUALIZAÇÃO DE HORÁRIOS ===`);
+    console.log(`   Body:`, req.body);
+    console.log(`   Content-Type:`, req.headers['content-type']);
+    
+    try {
+        const { time1, time2, password } = req.body;
+        
+        const result = {
+            received: {
+                time1: time1,
+                time2: time2,
+                password: password ? `[${password.length} chars]` : '[EMPTY]'
+            },
+            validation: {
+                time1_valid: /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time1),
+                time2_valid: /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time2),
+                password_correct: password === CONFIG.schedules.adminPassword,
+                times_different: time1 !== time2
+            },
+            current_config: {
+                time1: CONFIG.schedules.time1,
+                time2: CONFIG.schedules.time2,
+                adminPassword: CONFIG.schedules.adminPassword
+            },
+            system_status: {
+                activeCronJobs: activeCronJobs.length,
+                twilioLimitReached: twilioLimitReached,
+                dailyMessageCount: dailyMessageCount
+            }
+        };
+        
+        console.log(`🧪 Resultado do teste:`, result);
+        
+        res.json({
+            success: true,
+            test_result: result,
+            message: 'Teste concluído - verifique os logs',
+            version: '2.4.1'
+        });
+        
+    } catch (error) {
+        console.error(`❌ Erro no teste:`, error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
 });
 
 // 🔍 NOVO: ENDPOINT PARA DIAGNÓSTICO DO SISTEMA
@@ -927,6 +1033,20 @@ app.get('/admin', (req, res) => {
                     </small>
                 </div>
                 
+                <!-- BOTÃO DE TESTE DEBUG -->
+                <div style="margin-top: 15px;">
+                    <button onclick="testUpdate()" 
+                            style="background: linear-gradient(45deg, #17a2b8, #138496); 
+                                   color: white; border: none; border-radius: 8px; 
+                                   font-size: 14px; font-weight: 600; cursor: pointer; 
+                                   transition: transform 0.2s; padding: 12px; width: 100%;">
+                        🧪 Teste Debug Atualização
+                    </button>
+                    <small style="color: #666; display: block; text-align: center; margin-top: 5px;">
+                        Testa a validação sem salvar (para debug)
+                    </small>
+                </div>
+                
                 ${currentTwilioStatus ? `
                 <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ffc107;">
                     <strong>💡 INSTRUÇÕES DE EMERGÊNCIA:</strong><br>
@@ -966,7 +1086,16 @@ app.get('/admin', (req, res) => {
                         password: formData.get('password')
                     };
                     
+                    console.log('📤 Enviando dados:', data);
+                    
                     const alert = document.getElementById('alert');
+                    
+                    // Mostrar loading
+                    alert.className = 'alert';
+                    alert.innerHTML = '⏳ Atualizando horários...';
+                    alert.style.display = 'block';
+                    alert.style.background = '#cce5ff';
+                    alert.style.color = '#004085';
                     
                     try {
                         const response = await fetch('/admin/update-schedules', {
@@ -977,11 +1106,19 @@ app.get('/admin', (req, res) => {
                             body: JSON.stringify(data)
                         });
                         
+                        console.log('📥 Status da resposta:', response.status);
+                        console.log('📥 Headers da resposta:', response.headers);
+                        
                         const result = await response.json();
+                        console.log('📥 Dados recebidos:', result);
                         
                         if (result.success) {
                             alert.className = 'alert success';
-                            alert.innerHTML = '✅ ' + result.message + '<br>Página será recarregada em 3 segundos...';
+                            alert.innerHTML = \`✅ \${result.message}<br>
+                                <strong>Novos horários:</strong> \${result.schedules.brasil.time1} e \${result.schedules.brasil.time2}<br>
+                                <strong>UTC:</strong> \${result.schedules.utc.time1} e \${result.schedules.utc.time2}<br>
+                                <strong>Cron Jobs:</strong> \${result.activeCronJobs || 'N/A'}<br>
+                                <em>Página será recarregada em 3 segundos...</em>\`;
                             alert.style.display = 'block';
                             
                             setTimeout(() => {
@@ -989,12 +1126,15 @@ app.get('/admin', (req, res) => {
                             }, 3000);
                         } else {
                             alert.className = 'alert error';
-                            alert.innerHTML = '❌ ' + result.error;
+                            alert.innerHTML = \`❌ \${result.error}<br>
+                                \${result.details ? \`<small><strong>Detalhes:</strong> \${result.details.substring(0, 200)}...</small>\` : ''}\`;
                             alert.style.display = 'block';
                         }
                     } catch (error) {
+                        console.error('❌ Erro na requisição:', error);
                         alert.className = 'alert error';
-                        alert.innerHTML = '❌ Erro ao conectar com servidor: ' + error.message;
+                        alert.innerHTML = \`❌ Erro de conexão: \${error.message}<br>
+                            <small>Verifique o console do navegador para mais detalhes</small>\`;
                         alert.style.display = 'block';
                     }
                     
@@ -1051,6 +1191,68 @@ app.get('/admin', (req, res) => {
                     } catch (error) {
                         alert.className = 'alert error';
                         alert.innerHTML = '❌ Erro de conexão: ' + error.message;
+                        alert.style.display = 'block';
+                    }
+                }
+                
+                // NOVA FUNÇÃO: Teste Debug
+                async function testUpdate() {
+                    const formData = new FormData(document.getElementById('scheduleForm'));
+                    const data = {
+                        time1: formData.get('time1'),
+                        time2: formData.get('time2'),
+                        password: formData.get('password')
+                    };
+                    
+                    console.log('🧪 Iniciando teste debug...', data);
+                    
+                    const alert = document.getElementById('alert');
+                    alert.className = 'alert';
+                    alert.innerHTML = '🧪 Executando teste debug...';
+                    alert.style.display = 'block';
+                    alert.style.background = '#e2e3e5';
+                    alert.style.color = '#383d41';
+                    
+                    try {
+                        const response = await fetch('/admin/test-update', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+                        
+                        const result = await response.json();
+                        console.log('🧪 Resultado do teste:', result);
+                        
+                        if (result.success) {
+                            const validation = result.test_result.validation;
+                            alert.className = 'alert';
+                            alert.innerHTML = \`🧪 <strong>Resultado do Teste Debug:</strong><br>
+                                <strong>📥 Recebido:</strong><br>
+                                • time1: \${result.test_result.received.time1}<br>
+                                • time2: \${result.test_result.received.time2}<br>
+                                • password: \${result.test_result.received.password}<br><br>
+                                
+                                <strong>✅❌ Validação:</strong><br>
+                                • time1 válido: \${validation.time1_valid ? '✅' : '❌'}<br>
+                                • time2 válido: \${validation.time2_valid ? '✅' : '❌'}<br>
+                                • senha correta: \${validation.password_correct ? '✅' : '❌'}<br>
+                                • horários diferentes: \${validation.times_different ? '✅' : '❌'}<br><br>
+                                
+                                <small>Verifique o console do navegador e os logs do servidor para mais detalhes</small>\`;
+                            alert.style.display = 'block';
+                            alert.style.background = validation.time1_valid && validation.time2_valid && validation.password_correct && validation.times_different ? '#d4edda' : '#f8d7da';
+                            alert.style.color = validation.time1_valid && validation.time2_valid && validation.password_correct && validation.times_different ? '#155724' : '#721c24';
+                        } else {
+                            alert.className = 'alert error';
+                            alert.innerHTML = '❌ Erro no teste: ' + result.error;
+                            alert.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro no teste debug:', error);
+                        alert.className = 'alert error';
+                        alert.innerHTML = '❌ Erro no teste debug: ' + error.message;
                         alert.style.display = 'block';
                     }
                 }
@@ -2306,6 +2508,7 @@ app.use('*', (req, res) => {
             'GET /admin/current-schedules',
             'GET /admin/diagnostic',
             'POST /admin/update-schedules',
+            'POST /admin/test-update',
             'POST /admin/reset-twilio',
             'POST /webhook'
         ],
