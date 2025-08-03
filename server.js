@@ -264,7 +264,7 @@ async function executeAutomaticCheck(periodo = 'padrão') {
                 
                 const testMessage = `🧪 *TESTE SISTEMA PM ${periodo.toUpperCase()}* 🎖️
 
-⏰ *Execução:* ${periodo === 'manhã' ? '23:35 (Manhã)' : periodo === 'noite' ? '23:40 (Noite)' : 'Automático'}
+⏰ *Execução:* ${periodo === 'manhã' ? '23:57 (Manhã)' : periodo === 'noite' ? '23:55 (Noite)' : 'Automático'}
 📋 *Aniversários no banco:* ${allBirthdays.length}
 🔍 *Verificado para amanhã:* 0 aniversários
 🗓️ *Data verificada:* ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}
@@ -366,19 +366,19 @@ _Sistema PM - Alerta de Erro_ ⚠️`;
 // 🕘 CONFIGURAR CRON JOBS (CORRIGIDO para Render)
 console.log('⏰ Configurando cron jobs...');
 
-// Executa todos os dias às 23:35 (manhã) - horário do Brasil
+// Executa todos os dias às 23:57 (manhã) - horário do Brasil
 cron.schedule('0 9 * * *', () => {
     const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    console.log(`🌅 EXECUÇÃO MANHÃ (23:35) - ${brasilTime}`);
+    console.log(`🌅 EXECUÇÃO MANHÃ (23:57) - ${brasilTime}`);
     executeAutomaticCheck('manhã');
 }, {
     timezone: "America/Sao_Paulo"
 });
 
-// Executa todos os dias às 23:40 (noite) - horário do Brasil
+// Executa todos os dias às 23:55 (noite) - horário do Brasil
 cron.schedule('40 22 * * *', () => {
     const brasilTime = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    console.log(`🌙 EXECUÇÃO NOITE (23:40) - ${brasilTime}`);
+    console.log(`🌙 EXECUÇÃO NOITE (23:55) - ${brasilTime}`);
     executeAutomaticCheck('noite');
 }, {
     timezone: "America/Sao_Paulo"
@@ -481,8 +481,8 @@ app.get('/', async (req, res) => {
             <div class="executions">
                 <h3>⏰ Execuções Automáticas (Horário Brasil):</h3>
                 <ul>
-                    <li>🌅 <strong>23:35</strong> - Verificação matinal (busca aniversários de amanhã)</li>
-                    <li>🌙 <strong>23:40</strong> - Verificação noturna (segunda verificação)</li>
+                    <li>🌅 <strong>23:57</strong> - Verificação matinal (busca aniversários de amanhã)</li>
+                    <li>🌙 <strong>23:55</strong> - Verificação noturna (segunda verificação)</li>
                 </ul>
                 <p><small>📅 <strong>Verificando para amanhã:</strong> ${new Date(Date.now() + 86400000).toLocaleDateString('pt-BR')}</small></p>
             </div>
@@ -524,8 +524,8 @@ app.get('/test', async (req, res) => {
 ${tomorrowBirthdays.length > 0 ? `• 🎖️ ${tomorrowBirthdays.map(b => `${b.graduation} ${b.name}`).join(', ')}` : ''}
 
 ⏰ *Execuções Automáticas (Brasil):*
-• 🌅 23:35 - Verificação matinal
-• 🌙 23:40 - Verificação noturna
+• 🌅 23:57 - Verificação matinal
+• 🌙 23:55 - Verificação noturna
 
 ✅ *Sistema PM integrado funcionando perfeitamente!*
 
@@ -601,8 +601,8 @@ app.get('/status', async (req, res) => {
             config: {
                 timing: CONFIG.notification.timing,
                 executions: [
-                    { time: '23:35', description: 'Verificação matinal' },
-                    { time: '23:40', description: 'Verificação noturna' }
+                    { time: '23:57', description: 'Verificação matinal' },
+                    { time: '23:55', description: 'Verificação noturna' }
                 ],
                 toNumber: CONFIG.twilio.toNumber
             },
@@ -662,8 +662,8 @@ app.listen(PORT, async () => {
     console.log(`🎖️ Sistema PM iniciado na porta ${PORT}`);
     console.log(`⏰ Horário Brasil: ${brasilTime}`);
     console.log(`⏰ Cron jobs configurados:`);
-    console.log(`   🌅 23:35 - Verificação matinal`);
-    console.log(`   🌙 23:40 - Verificação noturna`);
+    console.log(`   🌅 23:57 - Verificação matinal`);
+    console.log(`   🌙 23:55 - Verificação noturna`);
     console.log(`📱 Destinatário: ${CONFIG.twilio.toNumber}`);
     console.log(`🌍 Timezone: America/Sao_Paulo`);
     console.log(`🆓 Render FREE - Sistema ativo!`);
